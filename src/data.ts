@@ -33,55 +33,55 @@ export const CATALOG: Item[] = [
   {
     id: 'smash', kind: 'menu', name: 'Double Smash Burger',
     desc: 'Two smashed beef patties, triple cheddar, house pickles and secret sauce on a toasted brioche bun. Served with crinkle-cut fries.',
-    price: 12.9, category: 'burgers', img: '/img/burger-smash.jpg', emoji: '🍔',
+    price: 12.9, category: 'burgers', img: 'img/burger-smash.jpg', emoji: '🍔',
     kcal: 940, time: '18–25 min', rating: 4.9, reviews: 482, popular: true,
   },
   {
     id: 'chicken-burger', kind: 'menu', name: 'Crispy Chicken Burger',
     desc: 'Buttermilk-brined fried chicken, crisp lettuce, tomato, pickles and garlic-mayo slaw on a brioche bun.',
-    price: 11.5, category: 'burgers', img: '/img/burger-chicken.jpg', emoji: '🍗',
+    price: 11.5, category: 'burgers', img: 'img/burger-chicken.jpg', emoji: '🍗',
     kcal: 820, time: '18–25 min', rating: 4.8, reviews: 317,
   },
   {
     id: 'pep-pizza', kind: 'menu', name: 'Pepperoni Supreme',
     desc: 'Wood-fired thin crust, double pepperoni, mozzarella, hot honey drizzle and fresh oregano.',
-    price: 14.0, category: 'pizza', img: '/img/pizza.jpg', emoji: '🍕',
+    price: 14.0, category: 'pizza', img: 'img/pizza.jpg', emoji: '🍕',
     kcal: 1100, time: '25–30 min', rating: 4.7, reviews: 264, popular: true,
   },
   {
     id: 'dragon-roll', kind: 'menu', name: 'Dragon Roll · 8 pcs',
     desc: 'Shrimp tempura, avocado and unagi glaze, crowned with salmon and glossy roe. Served with wasabi & pickled ginger.',
-    price: 13.5, category: 'sushi', img: '/img/sushi.jpg', emoji: '🍣',
+    price: 13.5, category: 'sushi', img: 'img/sushi.jpg', emoji: '🍣',
     kcal: 520, time: '20–30 min', rating: 4.9, reviews: 391, popular: true,
   },
   {
     id: 'salmon-bowl', kind: 'menu', name: 'Salmon Poke Bowl',
     desc: 'Seared salmon, avocado, edamame, mango and cucumber over sushi rice, toasted sesame and ponzu.',
-    price: 15.0, category: 'bowls', img: '/img/salmon-bowl.jpg', emoji: '🥗',
+    price: 15.0, category: 'bowls', img: 'img/salmon-bowl.jpg', emoji: '🥗',
     kcal: 640, time: '15–20 min', rating: 4.8, reviews: 208,
   },
   {
     id: 'wrap', kind: 'menu', name: 'Grilled Chicken Wrap',
     desc: 'Charred chicken breast, melted mozzarella, charred corn, creamy herb sauce and fresh greens in a grilled tortilla.',
-    price: 9.9, category: 'bowls', img: '/img/wrap.jpg', emoji: '🌯',
+    price: 9.9, category: 'bowls', img: 'img/wrap.jpg', emoji: '🌯',
     kcal: 580, time: '15–20 min', rating: 4.6, reviews: 154,
   },
   {
     id: 'caesar', kind: 'menu', name: 'Caesar Classic',
     desc: 'Baby romaine, aged parmesan, sourdough croutons and our 24-hour caesar dressing. Anchovy optional.',
-    price: 8.9, category: 'bowls', img: '/img/caesar.jpg', emoji: '🥗',
+    price: 8.9, category: 'bowls', img: 'img/caesar.jpg', emoji: '🥗',
     kcal: 420, time: '10–15 min', rating: 4.5, reviews: 121,
   },
   {
     id: 'lava-cake', kind: 'menu', name: 'Molten Lava Cake',
     desc: 'Warm dark-chocolate cake with a flowing center, vanilla bean ice cream and a dusting of cocoa.',
-    price: 6.5, category: 'desserts', img: '/img/lava-cake.jpg', emoji: '🍫',
+    price: 6.5, category: 'desserts', img: 'img/lava-cake.jpg', emoji: '🍫',
     kcal: 480, time: '15–20 min', rating: 4.9, reviews: 342, popular: true,
   },
   {
     id: 'latte', kind: 'menu', name: 'Iced Caramel Latte',
     desc: 'Double-shot espresso over cold milk with caramel cream and cold foam. The best thing in the fridge, arguably.',
-    price: 4.9, category: 'drinks', img: '/img/latte.jpg', emoji: '🧋',
+    price: 4.9, category: 'drinks', img: 'img/latte.jpg', emoji: '🧋',
     kcal: 180, time: '5–10 min', rating: 4.7, reviews: 98,
   },
 
@@ -162,7 +162,7 @@ export const CATALOG: Item[] = [
 
 export const HERO_ITEM: Item = {
   id: 'hero', kind: 'menu', name: 'The Fresh Bites Smash', desc: '',
-  price: 12.9, category: 'burgers', img: '/img/hero.jpg', emoji: '🍔',
+  price: 12.9, category: 'burgers', img: 'img/hero.jpg', emoji: '🍔',
   rating: 4.9, reviews: 482,
 }
 

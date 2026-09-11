@@ -5,8 +5,8 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
-    "build": "tsc --noEmit && vite build",
-    "preview": "vite preview"
+    "build": "tsc --noEmit && vite build --outDir docs",
+    "preview": "vite preview --outDir docs"
   },
   "dependencies": {
     "qrcode": "^1.5.3",
