@@ -39,15 +39,16 @@ export default function Footer() {
         </div>
         <div className="footer-col">
           <h4>Store</h4>
-          <span>{store.city} · Open 11:00 – 23:00</span>
+          <span>{store.city} · {store.open ? `Open ${store.hours}` : 'Closed now'}</span>
+          {store.address && <span>{store.address}</span>}
           <span>Free delivery over {money(store.freeAt, store.currency)}</span>
-          <span>Average delivery · 25 min</span>
+          <span>Average delivery · {store.stats.delivery}</span>
         </div>
         <div className="footer-col">
           <h4>Payments</h4>
           <span>💵 Cash on delivery</span>
           <span>💳 Card</span>
-          <span>⚡ USDT (TRC-20)</span>
+          {store.usdt.trim() && <span>⚡ USDT (TRC-20)</span>}
         </div>
       </div>
       <div className="wrap footer-base">

@@ -8,9 +8,19 @@ import React, {
   useState,
 } from 'react'
 import { CATALOG, DEFAULT_STORE } from './data'
-import type { CartLine, Item, Order, StoreConfig, ToastMsg, View } from './types'
+import { EMPTY_MENU } from './types'
+import type {
+  CartLine,
+  Item,
+  MenuState,
+  Order,
+  OrderStatus,
+  StoreConfig,
+  ToastMsg,
+  View,
+} from './types'
 import { load, save, shade, slugify } from './lib/util'
-import { buildOrderMessage, waLink } from './lib/whatsapp'
+import { buildOrderMessage, waDigits, waLink } from './lib/whatsapp'
 
 const VIEWS: View[] = ['home', 'menu', 'grocery', 'checkout', 'track', 'store']
 
@@ -19,32 +29,108 @@ function viewFromHash(): View {
   return VIEWS.includes(p) ? p : 'home'
 }
 
-export function storeLink(store: StoreConfig): string {
+// ── URL parameters ─────────────────────────────────────────────
+// Plan §21: never trust query parameters. Everything a scanned QR can carry
+// is validated and clamped here, in one place, before it reaches any state.
+
+const MAX_SLUG = 48
+const MAX_NAME = 60
+const MAX_CITY = 40
+const MAX_TABLE = 12
+
+export function cleanSlug(raw: string | null): string | null {
+  if (!raw) return null
+  const s = raw.toLowerCase().replace(/[^a-z0-9-]/g, '').replace(/-+/g, '-').replace(/^-|-$/g, '')
+  return s ? s.slice(0, MAX_SLUG) : null
+}
+
+export function cleanName(raw: string | null, fallback: string): string {
+  if (!raw) return fallback
+  // strip control characters and any tag markup; React escapes on render, but
+  // this keeps the persisted value clean too
+  const s = raw.replace(/[<>]/g, '').replace(/[\u0000-\u001f\u007f]/g, '').trim()
+  return s ? s.slice(0, MAX_NAME) : fallback
+}
+
+export function cleanText(raw: string | null, fallback: string, max: number): string {
+  if (!raw) return fallback
+  const s = raw.replace(/[<>]/g, '').replace(/[\u0000-\u001f\u007f]/g, '').trim()
+  return s ? s.slice(0, max) : fallback
+}
+
+export function cleanTable(raw: string | null): string | null {
+  if (!raw) return null
+  const s = raw.replace(/[^A-Za-z0-9 -]/g, '').trim()
+  return s ? s.slice(0, MAX_TABLE) : null
+}
+
+export function cleanFee(raw: string | null, fallback: number): number {
+  const n = parseFloat(raw ?? '')
+  return Number.isFinite(n) && n >= 0 && n <= 10_000 ? Math.round(n * 100) / 100 : fallback
+}
+
+/** Build the shareable / printable storefront URL, optionally for one table. */
+export function storeLink(store: StoreConfig, table?: string | null): string {
   const p = new URLSearchParams()
   p.set('store', store.slug)
   p.set('name', store.name)
   p.set('wa', store.whatsapp)
   p.set('emoji', store.emoji)
   p.set('fee', String(store.fee))
+  if (table) p.set('table', table)
   return `${window.location.origin}${window.location.pathname}?${p.toString()}`
 }
 
-function initStore(): StoreConfig {
+interface Session {
+  store: StoreConfig
+  /** true when the storefront came from a scanned QR rather than the owner's own setup */
+  scanned: boolean
+  table: string | null
+}
+
+function initSession(): Session {
   const p = new URLSearchParams(window.location.search)
-  const slug = p.get('store')
+  const slug = cleanSlug(p.get('store'))
   if (slug) {
-    const fee = parseFloat(p.get('fee') || '')
     return {
-      ...DEFAULT_STORE,
-      slug,
-      name: p.get('name') || DEFAULT_STORE.name,
-      whatsapp: p.get('wa') || DEFAULT_STORE.whatsapp,
-      emoji: p.get('emoji') || DEFAULT_STORE.emoji,
-      fee: Number.isFinite(fee) ? fee : DEFAULT_STORE.fee,
+      scanned: true,
+      table: cleanTable(p.get('table')),
+      store: {
+        ...DEFAULT_STORE,
+        slug,
+        name: cleanName(p.get('name'), DEFAULT_STORE.name),
+        whatsapp: waDigits(p.get('wa') || '').slice(0, 15) || DEFAULT_STORE.whatsapp,
+        emoji: cleanText(p.get('emoji'), DEFAULT_STORE.emoji, 8),
+        city: cleanText(p.get('city'), DEFAULT_STORE.city, MAX_CITY),
+        fee: cleanFee(p.get('fee'), DEFAULT_STORE.fee),
+      },
     }
   }
   const saved = load<Partial<StoreConfig> | null>('fb_store', null)
-  return { ...DEFAULT_STORE, ...(saved || {}) }
+  return {
+    scanned: false,
+    table: cleanTable(p.get('table')),
+    store: { ...DEFAULT_STORE, ...(saved || {}), stats: { ...DEFAULT_STORE.stats, ...(saved?.stats || {}) } },
+  }
+}
+
+// ── per-store menu ─────────────────────────────────────────────
+const menuKey = (slug: string) => `fb_menu_${slug}`
+
+/** Reads a store's menu, migrating the pre-v2 (plain array) shape if present. */
+export function readMenu(slug: string): MenuState {
+  const raw = load<MenuState | Item[] | null>(menuKey(slug), null)
+  if (!raw) return { ...EMPTY_MENU }
+  if (Array.isArray(raw)) return { v: 2, custom: raw as Item[], overrides: {}, hidden: [] }
+  if (raw.v === 2) {
+    return {
+      v: 2,
+      custom: Array.isArray(raw.custom) ? raw.custom : [],
+      overrides: raw.overrides && typeof raw.overrides === 'object' ? raw.overrides : {},
+      hidden: Array.isArray(raw.hidden) ? raw.hidden : [],
+    }
+  }
+  return { ...EMPTY_MENU }
 }
 
 export interface CustomerInfo {
@@ -60,10 +146,25 @@ interface Ctx {
 
   store: StoreConfig
   setStore: (s: StoreConfig) => void
+  /** The storefront was opened from a scanned QR, not the owner's own setup. */
+  scanned: boolean
+  /** Table from the scanned QR (plan §11 — must survive to the order). */
+  table: string | null
+  setTable: (t: string | null) => void
   link: string
+  tableLink: (table: string) => string
 
+  /** Everything the owner manages, including switched-off products. */
+  catalog: Item[]
+  /** Customer-visible catalog: built-ins minus hidden, plus custom, minus unavailable. */
   items: Item[]
   byId: (id: string) => Item | undefined
+
+  menu: MenuState
+  addItem: (item: Omit<Item, 'id'> & { id?: string }) => Item
+  updateItem: (id: string, patch: Partial<Item>) => void
+  removeItem: (id: string) => void
+  resetMenu: () => void
 
   cart: CartLine[]
   cartCount: number
@@ -86,7 +187,10 @@ interface Ctx {
     payment: string
     note: string
     sendWA: boolean
+    channel?: 'delivery' | 'table'
   }) => Order | null
+  setOrderStatus: (id: string, status: OrderStatus) => void
+  removeOrder: (id: string) => void
 
   toasts: ToastMsg[]
   toast: (text: string, icon?: string) => void
@@ -112,17 +216,21 @@ export function useApp(): Ctx {
 }
 
 let toastSeq = 1
+let customSeq = 0
 
 export function AppProvider({ children }: { children: React.ReactNode }) {
-  const [store, setStoreState] = useState<StoreConfig>(initStore)
+  const session = useRef<Session>(null as unknown as Session)
+  if (session.current === null) session.current = initSession()
+
+  const [store, setStoreState] = useState<StoreConfig>(session.current.store)
+  const scanned = session.current.scanned
+  const [table, setTable] = useState<string | null>(session.current.table)
   const [view, setView] = useState<View>(viewFromHash)
   const [cart, setCart] = useState<CartLine[]>(() => load('fb_cart', [] as CartLine[]))
   const [favs, setFavs] = useState<string[]>(() => load('fb_favs', [] as string[]))
   const [orders, setOrders] = useState<Order[]>(() => load('fb_orders', [] as Order[]))
   const [focusId, setFocusId] = useState<string | null>(null)
-  const [customItems, setCustomItems] = useState<Item[]>(() =>
-    load(`fb_menu_${initStore().slug}`, [] as Item[])
-  )
+  const [menu, setMenu] = useState<MenuState>(() => readMenu(session.current.store.slug))
   const [toasts, setToasts] = useState<ToastMsg[]>([])
   const [cartOpen, setCartOpen] = useState(false)
   const [modalId, setModalId] = useState<string | null>(null)
@@ -142,20 +250,16 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   useEffect(() => save('fb_cart', cart), [cart])
   useEffect(() => save('fb_favs', favs), [favs])
   useEffect(() => save('fb_orders', orders.slice(0, 30)), [orders])
-  useEffect(() => save(`fb_menu_${store.slug}`, customItems), [store.slug, customItems])
-  useEffect(() => save('fb_store', store), [store])
-
-  // reload custom menu when store slug changes (QR with a different store)
+  useEffect(() => save(menuKey(store.slug), menu), [store.slug, menu])
+  // A customer who scans somebody else's QR must not overwrite the owner's
+  // own saved store settings with the URL-derived subset.
   useEffect(() => {
-    setCustomItems(load(`fb_menu_${store.slug}`, [] as Item[]))
-  }, [store.slug])
+    if (!scanned) save('fb_store', store)
+  }, [store, scanned])
 
-  // store view mutates the menu directly — listen for that event
+  // Reload the menu when a different store's QR is opened.
   useEffect(() => {
-    const onMenuChanged = () =>
-      setCustomItems(load(`fb_menu_${store.slug}`, [] as Item[]))
-    window.addEventListener('fb-menu-changed', onMenuChanged)
-    return () => window.removeEventListener('fb-menu-changed', onMenuChanged)
+    setMenu(readMenu(store.slug))
   }, [store.slug])
 
   // ── router ──────────────────────────────────────────────────
@@ -188,8 +292,19 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   }, [orders])
 
   // ── data ────────────────────────────────────────────────────
-  const items = useMemo(() => [...CATALOG, ...customItems], [customItems])
-  const byId = useCallback((id: string) => items.find(i => i.id === id), [items])
+  const catalog = useMemo(() => {
+    const builtIn = CATALOG.filter(i => !menu.hidden.includes(i.id)).map(i =>
+      menu.overrides[i.id] ? { ...i, ...menu.overrides[i.id] } : i
+    )
+    return [...builtIn, ...menu.custom]
+  }, [menu])
+
+  const items = useMemo(
+    () => catalog.filter(i => i.available !== false),
+    [catalog]
+  )
+
+  const byId = useCallback((id: string) => catalog.find(i => i.id === id), [catalog])
 
   const cartCount = useMemo(() => cart.reduce((a, l) => a + l.qty, 0), [cart])
   const subtotal = useMemo(
@@ -202,6 +317,42 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   )
   const total = subtotal + deliveryFee
 
+  // ── menu management (the single write path for products) ────
+  const addItem = useCallback(
+    (item: Omit<Item, 'id'> & { id?: string }): Item => {
+      const created: Item = {
+        ...item,
+        id: item.id || `c${Date.now().toString(36)}${(customSeq++).toString(36)}`,
+        custom: true,
+      }
+      setMenu(m => ({ ...m, custom: [created, ...m.custom] }))
+      return created
+    },
+    []
+  )
+
+  const updateItem = useCallback((id: string, patch: Partial<Item>) => {
+    setMenu(m => {
+      if (m.custom.some(i => i.id === id)) {
+        return {
+          ...m,
+          custom: m.custom.map(i => (i.id === id ? { ...i, ...patch, id } : i)),
+        }
+      }
+      return { ...m, overrides: { ...m.overrides, [id]: { ...m.overrides[id], ...patch } } }
+    })
+  }, [])
+
+  const removeItem = useCallback((id: string) => {
+    setMenu(m =>
+      m.custom.some(i => i.id === id)
+        ? { ...m, custom: m.custom.filter(i => i.id !== id) }
+        : { ...m, hidden: m.hidden.includes(id) ? m.hidden : [...m.hidden, id] }
+    )
+  }, [])
+
+  const resetMenu = useCallback(() => setMenu({ ...EMPTY_MENU }), [])
+
   // ── actions ─────────────────────────────────────────────────
   const toast = useCallback((text: string, icon?: string) => {
     const id = toastSeq++
@@ -213,8 +364,17 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     toastTimers.current.set(id, timer)
   }, [])
 
+  useEffect(
+    () => () => {
+      toastTimers.current.forEach(t => clearTimeout(t))
+      toastTimers.current.clear()
+    },
+    []
+  )
+
   const addToCart = useCallback(
     (id: string, qty = 1) => {
+      if (byId(id)?.available === false) return
       setCart(c => {
         const line = c.find(l => l.id === id)
         if (line) return c.map(l => (l.id === id ? { ...l, qty: l.qty + qty } : l))
@@ -226,12 +386,13 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   )
 
   const setQty = useCallback((id: string, qty: number) => {
+    const safe = Math.max(0, Math.min(99, Math.floor(qty) || 0))
     setCart(c =>
-      qty <= 0
+      safe <= 0
         ? c.filter(l => l.id !== id)
         : c.some(l => l.id === id)
-          ? c.map(l => (l.id === id ? { ...l, qty } : l))
-          : [...c, { id, qty }]
+          ? c.map(l => (l.id === id ? { ...l, qty: safe } : l))
+          : [...c, { id, qty: safe }]
     )
   }, [])
 
@@ -255,8 +416,8 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
 
   const setStore = useCallback((s: StoreConfig) => {
     setStoreState(prev => {
-      const next = { ...s, slug: slugify(s.name || prev.name) }
-      return next
+      const nextSlug = slugify(s.name || prev.name)
+      return { ...s, slug: nextSlug }
     })
   }, [])
 
@@ -264,25 +425,35 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
 
   const placeOrder = useCallback(
     (
-      info: CustomerInfo & { when: string; payment: string; note: string; sendWA: boolean }
+      info: CustomerInfo & {
+        when: string
+        payment: string
+        note: string
+        sendWA: boolean
+        channel?: 'delivery' | 'table'
+      }
     ): Order | null => {
-      if (cart.length === 0) return null
+      const lines = cart.filter(l => byId(l.id))
+      if (lines.length === 0) return null
       const prefix =
         store.slug.replace(/[^a-z]/gi, '').slice(0, 2).toUpperCase() || 'FB'
+      const channel = info.channel ?? (table ? 'table' : 'delivery')
       const order: Order = {
         id: `${prefix}-${1000 + Math.floor(Math.random() * 9000)}`,
         ts: Date.now(),
-        lines: cart,
+        lines,
         subtotal,
         deliveryFee,
         total,
         name: info.name,
         phone: info.phone,
-        address: `${info.address}, ${info.city}`,
+        address: info.address ? `${info.address}, ${info.city}`.replace(/,\s*$/, '') : info.city,
         when: info.when,
         payment: info.payment,
         note: info.note,
         sentWhatsApp: info.sendWA,
+        channel,
+        table: channel === 'table' ? table ?? undefined : undefined,
       }
       setOrders(o => [order, ...o])
       setFocusId(order.id)
@@ -293,19 +464,41 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       }
       return order
     },
-    [cart, subtotal, deliveryFee, total, store, byId]
+    [cart, subtotal, deliveryFee, total, store, byId, table]
   )
 
+  const setOrderStatus = useCallback((id: string, status: OrderStatus) => {
+    setOrders(os =>
+      os.map(o => (o.id === id ? { ...o, status, statusAt: Date.now() } : o))
+    )
+  }, [])
+
+  const removeOrder = useCallback((id: string) => {
+    setOrders(os => os.filter(o => o.id !== id))
+    setFocusId(f => (f === id ? null : f))
+  }, [])
+
   const link = useMemo(() => storeLink(store), [store])
+  const tableLink = useCallback((t: string) => storeLink(store, t), [store])
 
   const value: Ctx = {
     view,
     go,
     store,
     setStore,
+    scanned,
+    table,
+    setTable,
     link,
+    tableLink,
+    catalog,
     items,
     byId,
+    menu,
+    addItem,
+    updateItem,
+    removeItem,
+    resetMenu,
     cart,
     cartCount,
     subtotal,
@@ -321,6 +514,8 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     focusId,
     setFocusId,
     placeOrder,
+    setOrderStatus,
+    removeOrder,
     toasts,
     toast,
     cartOpen,

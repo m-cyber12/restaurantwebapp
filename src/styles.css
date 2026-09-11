@@ -1963,6 +1963,17 @@ img {
   border-color: color-mix(in srgb, var(--green) 50%, transparent);
   color: #57e88f;
 }
+.status-pill.cancelled {
+  background: rgba(255, 77, 109, 0.12);
+  border-color: rgba(255, 77, 109, 0.45);
+  color: #ff8fa3;
+}
+.track-status-note {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--muted);
+  align-self: center;
+}
 .track-eta {
   font-size: 14.5px;
   font-weight: 600;
@@ -2179,6 +2190,15 @@ img {
 }
 .tcard-status.done {
   color: #57e88f;
+}
+.tcard-status.cancelled {
+  color: #ff8fa3;
+}
+.tcard.cancelled {
+  opacity: 0.62;
+}
+.tcard.cancelled .tcard-bar i {
+  background: rgba(255, 77, 109, 0.55);
 }
 .tcard-mid {
   display: flex;

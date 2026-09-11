@@ -22,7 +22,7 @@ export default function TopNav() {
           <span className="brand-text">
             <span className="brand-name">{store.name}</span>
             <span className="brand-sub">
-              <PinIcon size={11} /> {store.city} · Open till 23:00
+              <PinIcon size={11} /> {store.city} · {store.open ? `Open ${store.hours}` : 'Closed'}
             </span>
           </span>
         </button>

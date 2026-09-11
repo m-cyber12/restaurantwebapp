@@ -235,7 +235,7 @@ export default function CheckoutView() {
             {form.payment === 'usdt' && (
               <div className="usdt-box">
                 <span>⚡ After we confirm on WhatsApp, send to:</span>
-                <code>TXk4qR8vN2pLmW9fZcY7uB1dS5gH3jKaEo</code>
+                <code>{store.usdt || 'No wallet configured'}</code>
                 <span>USDT · TRON (TRC-20) · network fee included</span>
               </div>
             )}

@@ -4,11 +4,11 @@ import { useApp } from '../store'
 import { cls, copyText, money } from '../lib/util'
 import QR from './QR'
 import Img from './Img'
-import type { Item, Kind } from '../types'
+import type { Kind } from '../types'
 import { Arrow } from './icons'
 
 export default function StoreView() {
-  const { store, setStore, link, items, toast, go } = useApp()
+  const { store, setStore, link, catalog, toast, go, addItem, removeItem, resetMenu } = useApp()
   const [add, setAdd] = useState({
     name: '',
     price: '',
@@ -30,12 +30,11 @@ export default function StoreView() {
       toast('Add a name and a price first', '✍️')
       return
     }
-    const item: Item = {
-      id: `c${Date.now()}`,
+    const item = addItem({
       kind: add.kind,
       name: add.name.trim(),
       desc: 'Added by the owner for this store.',
-      price,
+      price: Math.round(price * 100) / 100,
       category: add.category,
       emoji: add.emoji.trim() || '🍽️',
       img: add.img.trim() || undefined,
@@ -44,28 +43,18 @@ export default function StoreView() {
       unit: add.kind === 'grocery' ? 'per item' : undefined,
       rating: 4.8,
       reviews: 0,
-      custom: true,
-    }
-    const stored = JSON.parse(localStorage.getItem(`fb_menu_${store.slug}`) || '[]') as Item[]
-    localStorage.setItem(`fb_menu_${store.slug}`, JSON.stringify([item, ...stored]))
-    window.dispatchEvent(new CustomEvent('fb-menu-changed'))
+    })
     toast(`“${item.name}” added to your menu`, '✅')
     setAdd(a => ({ ...a, name: '', price: '', img: '' }))
   }
 
-  const removeItem = (id: string) => {
-    const stored = JSON.parse(localStorage.getItem(`fb_menu_${store.slug}`) || '[]') as Item[]
-    localStorage.setItem(
-      `fb_menu_${store.slug}`,
-      JSON.stringify(stored.filter(i => i.id !== id))
-    )
-    window.dispatchEvent(new CustomEvent('fb-menu-changed'))
-    toast('Item removed', '🗑️')
+  const dropItem = (id: string, name: string) => {
+    removeItem(id)
+    toast(`“${name}” removed from your menu`, '🗑️')
   }
 
-  const resetMenu = () => {
-    localStorage.removeItem(`fb_menu_${store.slug}`)
-    window.dispatchEvent(new CustomEvent('fb-menu-changed'))
+  const resetAll = () => {
+    resetMenu()
     toast('Menu reset to the default catalog', '♻️')
   }
 
@@ -84,7 +73,7 @@ export default function StoreView() {
     toast(ok ? 'Link copied to clipboard' : 'Could not copy — select it manually', ok ? '📋' : '⚠️')
   }
 
-  const custom = items.filter(i => i.custom)
+  const custom = catalog.filter(i => i.custom)
 
   return (
     <div className="wrap page store-page">
@@ -306,7 +295,7 @@ export default function StoreView() {
         </form>
 
         <ul className="menu-list">
-          {items.map(i => (
+          {catalog.map(i => (
             <li key={i.id}>
               <span className="ml-thumb">
                 <Img item={i} />
@@ -318,7 +307,7 @@ export default function StoreView() {
               </span>
               <span className="ml-price">{money(i.price, store.currency)}</span>
               {i.custom ? (
-                <button className="ml-del" onClick={() => removeItem(i.id)} aria-label={`Delete ${i.name}`}>
+                <button className="ml-del" onClick={() => dropItem(i.id, i.name)} aria-label={`Delete ${i.name}`}>
                   🗑
                 </button>
               ) : (
