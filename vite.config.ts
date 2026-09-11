@@ -9,5 +9,13 @@ export default defineConfig({
     host: '0.0.0.0',
     port: 5173,
     strictPort: true,
+    // Allow sandbox/preview hosts (and any subdomain) so the app can be
+    // previewed and tested from outside localhost.
+    allowedHosts: true,
+  },
+  preview: {
+    host: '0.0.0.0',
+    port: 4173,
+    allowedHosts: true,
   },
 })

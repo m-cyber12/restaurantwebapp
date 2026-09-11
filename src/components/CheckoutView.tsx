@@ -20,7 +20,7 @@ interface Form {
 const EMPTY_CARD = { number: '', holder: '', exp: '', cvc: '' }
 
 export default function CheckoutView() {
-  const { store, cart, byId, subtotal, deliveryFee, total, go, placeOrder, toast } = useApp()
+  const { store, cart, byId, subtotal, deliveryFee, total, go, placeOrder, toast, table, setTable } = useApp()
   const saved = useMemo(
     () => load('fb_customer', { name: '', phone: '', address: '', city: store.city }),
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -54,10 +54,11 @@ export default function CheckoutView() {
     card.holder.trim().length > 1 &&
     card.exp.trim().length >= 4 &&
     card.cvc.trim().length >= 3
+  const dineIn = !!table
   const missing = [
     !form.name.trim() && 'name',
     !form.phone.trim() && 'phone',
-    !form.address.trim() && 'address',
+    !dineIn && !form.address.trim() && 'address',
     form.payment === 'card' && !cardOk && 'card details',
   ].filter(Boolean) as string[]
   const valid = missing.length === 0
@@ -74,11 +75,30 @@ export default function CheckoutView() {
       payment: payMeta?.label ?? form.payment,
       note: form.note.trim(),
       sendWA: form.sendWA,
+      channel: dineIn ? 'table' : 'delivery',
     })
     if (order) {
       toast(`Order ${order.id} placed — ${form.sendWA ? 'sent to WhatsApp' : 'confirmed here'} 🎉`, '🛵')
       go('track')
     }
+  }
+
+  if (!store.open) {
+    return (
+      <div className="wrap page">
+        <div className="empty">
+          <span className="empty-icon">🔴</span>
+          <h3>{store.name} is closed</h3>
+          <p>
+            We are not taking orders right now. Our hours are {store.hours} —
+            your cart is saved, come back then.
+          </p>
+          <button className="btn btn-primary" onClick={() => go('menu')}>
+            Browse the menu <Arrow size={15} />
+          </button>
+        </div>
+      </div>
+    )
   }
 
   if (lines.length === 0) {
@@ -102,7 +122,8 @@ export default function CheckoutView() {
         <div>
           <h2>Checkout</h2>
           <p>
-            {store.name} · {store.city} · delivery in ~25 min
+            {store.name} · {store.city} ·{' '}
+            {dineIn ? `dine-in at table ${table}` : `delivery in ~${store.stats.delivery}`}
           </p>
         </div>
       </header>
@@ -135,16 +156,29 @@ export default function CheckoutView() {
           </section>
 
           <section className="card cform">
-            <h3><span className="cnum">2</span> Delivery address</h3>
-            <label className="flabel">
-              <span>Street &amp; apartment</span>
-              <input
-                value={form.address}
-                onChange={e => set('address', e.target.value)}
-                placeholder="42 Maple Ave, Apt 3"
-                autoComplete="street-address"
-              />
-            </label>
+            <h3><span className="cnum">2</span> {dineIn ? 'Your table' : 'Delivery address'}</h3>
+            {dineIn ? (
+              <div className="table-banner">
+                <span className="table-banner-num">🪑 {table}</span>
+                <div>
+                  <b>Table {table}</b>
+                  <span>Eating in — we will bring it over. No delivery fee.</span>
+                </div>
+                <button className="btn btn-ghost btn-sm" onClick={() => setTable(null)}>
+                  Switch to delivery
+                </button>
+              </div>
+            ) : (
+              <label className="flabel">
+                <span>Street &amp; apartment</span>
+                <input
+                  value={form.address}
+                  onChange={e => set('address', e.target.value)}
+                  placeholder="42 Maple Ave, Apt 3"
+                  autoComplete="street-address"
+                />
+              </label>
+            )}
             <div className="frow">
               <label>
                 <span>City / area</span>
@@ -235,7 +269,7 @@ export default function CheckoutView() {
             {form.payment === 'usdt' && (
               <div className="usdt-box">
                 <span>⚡ After we confirm on WhatsApp, send to:</span>
-                <code>TXk4qR8vN2pLmW9fZcY7uB1dS5gH3jKaEo</code>
+                <code>{store.usdt || 'No wallet configured'}</code>
                 <span>USDT · TRON (TRC-20) · network fee included</span>
               </div>
             )}
@@ -264,9 +298,9 @@ export default function CheckoutView() {
               <span>{money(subtotal, store.currency)}</span>
             </div>
             <div className="drow">
-              <span>Delivery</span>
+              <span>{dineIn ? `Table ${table} · dine-in` : 'Delivery'}</span>
               <span className={deliveryFee === 0 ? 'free' : ''}>
-                {deliveryFee === 0 ? 'FREE' : money(deliveryFee, store.currency)}
+                {deliveryFee === 0 ? (dineIn ? 'No delivery' : 'FREE') : money(deliveryFee, store.currency)}
               </span>
             </div>
             <div className="drow drow-total">
@@ -282,6 +316,7 @@ export default function CheckoutView() {
               <span
                 className={cls('switch', form.sendWA && 'on')}
                 role="switch"
+                aria-label="Also send this order to the store's WhatsApp"
                 aria-checked={form.sendWA}
                 tabIndex={0}
                 onClick={() => set('sendWA', !form.sendWA)}

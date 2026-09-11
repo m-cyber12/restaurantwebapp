@@ -50,7 +50,13 @@ export function buildOrderMessage(
   L.push('')
   L.push(`👤 ${o.name}`)
   L.push(`📞 ${o.phone}`)
-  L.push(`📍 ${o.address}`)
+  if (o.channel === 'table' && o.table) {
+    // Plan §11/§12: the table the QR came from must survive to the order.
+    L.push(`🪑 Table: ${o.table}`)
+    L.push('🏠 Dine-in — no delivery needed')
+  } else {
+    if (o.address) L.push(`📍 ${o.address}`)
+  }
   L.push(`🕒 ${o.when}`)
   L.push(`💵 ${o.payment}`)
   if (o.note) L.push(`📝 ${o.note}`)

@@ -1,5 +1,5 @@
 import { useMemo, useState } from 'react'
-import { STAGES, etaText, progressOf, stageOf } from '../lib/order'
+import { STAGES, etaText, isCancelled, progressOf, stageOf, statusLabel } from '../lib/order'
 import { useApp } from '../store'
 import { cls, fmtDay, fmtTime, money } from '../lib/util'
 import { buildOrderMessage, statusLink, waLink } from '../lib/whatsapp'
@@ -37,6 +37,7 @@ export default function TrackView() {
   const stage = stageOf(selected, now)
   const progress = progressOf(selected, now)
   const delivered = stage >= STAGES.length - 1
+  const cancelled = isCancelled(selected)
 
   const orderAgain = () => {
     selected.lines.forEach(l => addToCart(l.id, l.qty))
@@ -60,8 +61,8 @@ export default function TrackView() {
               <span className="track-id">#{selected.id}</span>
               <h3>{fmtDay(selected.ts)} · {fmtTime(selected.ts)}</h3>
             </div>
-            <span className={cls('status-pill', delivered && 'done')}>
-              {delivered ? '🎉 Delivered' : STAGES[stage].label}
+            <span className={cls('status-pill', delivered && 'done', cancelled && 'cancelled')}>
+              {cancelled ? '✖ Cancelled' : delivered ? '🎉 Delivered' : STAGES[stage].label}
             </span>
           </div>
 
@@ -73,7 +74,7 @@ export default function TrackView() {
           </div>
 
           {/* Timeline */}
-          <div className="timeline" role="img" aria-label={`Order status: ${STAGES[stage].label}`}>
+          <div className="timeline" role="img" aria-label={`Order status: ${cancelled ? 'Cancelled' : STAGES[stage].label}`}>
             <div className="timeline-line">
               <i style={{ width: `${progress * 100}%` }} />
             </div>
@@ -102,18 +103,20 @@ export default function TrackView() {
             </ol>
           </div>
 
-          {!delivered && stage >= 3 && (
+          {!cancelled && !delivered && stage >= 3 && (
             <div className="driver-card">
               <span className="driver-avatar">🧑🏽‍✈️</span>
               <div>
-                <b>Karim is on the way</b>
-                <span>🛵 Scooter · ★ 4.9 · Plate #{selected.id.slice(-4)}</span>
+                <b>Your rider is on the way</b>
+                <span>🛵 Order #{selected.id} · {etaText(selected, now)}</span>
               </div>
               <a
                 className="btn btn-ghost btn-sm"
-                href={`tel:${selected.phone.replace(/[^\d+]/g, '')}`}
+                href={statusLink(store, selected)}
+                target="_blank"
+                rel="noreferrer"
               >
-                Call
+                <WAIcon size={15} /> Contact
               </a>
             </div>
           )}
@@ -150,12 +153,18 @@ export default function TrackView() {
                 <span>{money(selected.total, store.currency)}</span>
               </div>
               <p className="track-addr">
-                📍 {selected.address} · 🕒 {selected.when}
+                {selected.channel === 'table' && selected.table
+                  ? `🪑 Table ${selected.table} · dine-in`
+                  : `📍 ${selected.address}`}{' '}
+                · 🕒 {selected.when}
               </p>
             </div>
           </div>
 
           <div className="track-actions">
+            <span className="track-status-note" aria-live="polite">
+              Status: {cancelled ? 'Cancelled' : statusLabel(selected)}
+            </span>
             <a
               className="btn btn-wa"
               href={statusLink(store, selected)}
@@ -188,21 +197,23 @@ export default function TrackView() {
             {orders.map(o => {
               const s = stageOf(o, now)
               const d = s >= STAGES.length - 1
+              const c = isCancelled(o)
               return (
                 <button
                   key={o.id}
-                  className={cls('tcard', o.id === selected.id && 'on', d && 'delivered')}
+                  className={cls('tcard', o.id === selected.id && 'on', d && 'delivered', c && 'cancelled')}
                   onClick={() => setSelId(o.id)}
                 >
                   <div className="tcard-top">
                     <b>#{o.id}</b>
-                    <span className={cls('tcard-status', d && 'done')}>
-                      {d ? 'Delivered 🎉' : STAGES[s].label}
+                    <span className={cls('tcard-status', d && 'done', c && 'cancelled')}>
+                      {c ? 'Cancelled' : d ? 'Delivered 🎉' : STAGES[s].label}
                     </span>
                   </div>
                   <div className="tcard-mid">
                     <span>
                       {fmtDay(o.ts)} · {fmtTime(o.ts)} · {o.lines.reduce((a, l) => a + l.qty, 0)} items
+                      {o.channel === 'table' && o.table ? ` · 🪑 Table ${o.table}` : ''}
                     </span>
                     <b>{money(o.total, store.currency)}</b>
                   </div>

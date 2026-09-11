@@ -2,12 +2,13 @@ import { useEffect, useState } from 'react'
 import { HERO_ITEM, MARQUEE, TICKER } from '../data'
 import { useApp } from '../store'
 import { greetingLink } from '../lib/whatsapp'
+import { bestScore, searchCatalog } from '../lib/search'
 import QR from './QR'
 import Img from './Img'
 import { Arrow, SearchIcon, WAIcon } from './icons'
 
 export default function Hero() {
-  const { store, link, go, search, setSearch } = useApp()
+  const { store, link, go, search, setSearch, items, setCatFilter, table } = useApp()
   const [ti, setTi] = useState(0)
 
   useEffect(() => {
@@ -15,8 +16,21 @@ export default function Hero() {
     return () => clearInterval(t)
   }, [])
 
+  /**
+   * Route the hero search to whichever catalog actually has hits, so typing
+   * "avocado" lands in the market instead of an empty menu.
+   */
+  const heroItem = store.heroImg.trim()
+    ? { ...HERO_ITEM, img: store.heroImg.trim() }
+    : HERO_ITEM
+
   const doSearch = () => {
-    go('menu')
+    setCatFilter(null)
+    const menu = searchCatalog(items, 'menu', search).primary
+    const market = searchCatalog(items, 'grocery', search).primary
+    // Route by match *strength*, not count: an exact product name in the market
+    // beats an incidental mention of that word in a menu description.
+    go(bestScore(market, search) > bestScore(menu, search) ? 'grocery' : 'menu')
   }
 
   return (
@@ -26,7 +40,9 @@ export default function Hero() {
         <div className="hero-copy">
           <span className="eyebrow">
             <span className="dot-live" aria-hidden />
-            {store.city} · Open till 23:00 · QR &amp; WhatsApp ordering
+            {table
+              ? `Table ${table} · ${store.name}`
+              : store.city} · {store.open ? `Open ${store.hours}` : 'Closed now'} · QR &amp; WhatsApp ordering
           </span>
           <h1>
             Scan. Tap.
@@ -69,12 +85,12 @@ export default function Hero() {
 
           <div className="hero-stats">
             <div>
-              <b>4.8★</b>
-              <span>2,300+ reviews</span>
+              <b>{store.stats.rating}</b>
+              <span>{store.stats.reviews}</span>
             </div>
             <div className="hstat-div" aria-hidden />
             <div>
-              <b>25 min</b>
+              <b>{store.stats.delivery}</b>
               <span>average delivery</span>
             </div>
             <div className="hstat-div" aria-hidden />
@@ -87,7 +103,7 @@ export default function Hero() {
 
         <div className="hero-art">
           <div className="hero-img">
-            <Img item={HERO_ITEM} eager className="hero-img-photo" />
+            <Img item={heroItem} eager className="hero-img-photo" />
             <div className="steam" aria-hidden>
               <i />
               <i />

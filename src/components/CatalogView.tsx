@@ -1,35 +1,34 @@
 import { CATEGORIES } from '../data'
 import { useApp } from '../store'
 import { cls } from '../lib/util'
+import { searchCatalog } from '../lib/search'
 import type { Kind } from '../types'
 import ProductCard from './ProductCard'
 import { SearchIcon } from './icons'
 
 export default function CatalogView({ kind }: { kind: Kind }) {
-  const { items, search, setSearch, catFilter, setCatFilter, store, favs } = useApp()
+  const { items, search, setSearch, catFilter, setCatFilter, favs } = useApp()
   const cats = CATEGORIES.filter(c => c.kind === kind)
-  const q = search.trim().toLowerCase()
-
-  const matches = (name: string) =>
-    name
-      .toLowerCase()
-      .split(' ')
-      .some(w => w.length > 2 && q.includes(w)) || q.split(' ').some(w => w.length > 2 && name.toLowerCase().includes(w))
+  const q = search.trim()
+  const showingFavs = catFilter === 'favs'
 
   const base = items.filter(i => i.kind === kind)
   const other = items.filter(i => i.kind !== kind)
-  const showingFavs = catFilter === 'favs'
-  const filtered = q
-    ? base.filter(i => matches(i.name))
-    : showingFavs
-      ? base.filter(i => favs.includes(i.id))
-      : catFilter
-        ? base.filter(i => i.category === catFilter)
-        : base
-  const otherFiltered = q ? other.filter(i => matches(i.name)) : []
+
+  // Search covers name, description, category and pack size, and it narrows
+  // *within* the active category/favourites filter rather than replacing it.
+  const scoped = showingFavs
+    ? base.filter(i => favs.includes(i.id))
+    : catFilter
+      ? base.filter(i => i.category === catFilter)
+      : base
+
+  const { primary: searchHits, other: otherFiltered } = searchCatalog(items, kind, q)
+  const filtered = q ? scoped.filter(i => searchHits.includes(i)) : scoped
+  const crossHits = q && !catFilter && !showingFavs ? otherFiltered : []
 
   return (
-    <div className="wrap page" key={`${kind}-${q}`}>
+    <div className="wrap page">
       <header className="page-head">
         <div>
           <h2>{kind === 'menu' ? 'Tonight’s Menu' : 'The Market'}</h2>
@@ -77,8 +76,8 @@ export default function CatalogView({ kind }: { kind: Kind }) {
       </div>
 
       {q && (
-        <p className="results-note">
-          {filtered.length + otherFiltered.length} result{filtered.length + otherFiltered.length === 1 ? '' : 's'} for “{search}”
+        <p className="results-note" role="status">
+          {filtered.length + crossHits.length} result{filtered.length + crossHits.length === 1 ? '' : 's'} for “{search}”
         </p>
       )}
 
@@ -100,21 +99,24 @@ export default function CatalogView({ kind }: { kind: Kind }) {
           </p>
         </div>
       )}
-      {q && filtered.length === 0 && otherFiltered.length === 0 && (
+      {q && filtered.length === 0 && crossHits.length === 0 && (
         <div className="empty">
           <span className="empty-icon">🔍</span>
-          <h3>Nothing for “{search}”</h3>
+          <h3>No products found</h3>
           <p>
-            Try “burger”, “sushi”, “avocado” or “bread”.
+            Nothing matches “{search}”. Try “burger”, “sushi”, “avocado” or “bread”.
           </p>
+          <button className="btn btn-ghost btn-sm" onClick={() => setSearch('')}>
+            Clear search
+          </button>
         </div>
       )}
 
-      {otherFiltered.length > 0 && (
+      {crossHits.length > 0 && (
         <section className="cross">
           <h3>{kind === 'menu' ? 'From the market' : 'From the menu'}</h3>
           <div className="grid grid-3">
-            {otherFiltered.map(i => (
+            {crossHits.map(i => (
               <ProductCard key={i.id} item={i} />
             ))}
           </div>

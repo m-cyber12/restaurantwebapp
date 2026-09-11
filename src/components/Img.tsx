@@ -23,6 +23,8 @@ export default function Img({
         src={item.img}
         alt={item.name}
         loading={eager ? 'eager' : 'lazy'}
+        width={800}
+        height={800}
         className={`ft-img ${className}`}
         onError={() => setFailed(true)}
         draggable={false}

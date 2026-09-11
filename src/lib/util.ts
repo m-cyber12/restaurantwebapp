@@ -51,8 +51,13 @@ export function slugify(name: string): string {
   return (
     name
       .toLowerCase()
+      .normalize('NFD')
+      .replace(/[\u0300-\u036f]/g, '')
+      // an apostrophe joins words ("Mama Rosa's" -> "mama-rosas"), it is not a separator
+      .replace(/['\u2019`]/g, '')
       .replace(/[^a-z0-9]+/g, '-')
-      .replace(/(^-|-$)/g, '') || 'my-store'
+      .replace(/(^-|-$)/g, '')
+      .slice(0, 48) || 'my-store'
   )
 }
 

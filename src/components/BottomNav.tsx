@@ -7,11 +7,14 @@ const TABS: Array<[View, string, string]> = [
   ['menu', 'Menu', '🍔'],
   ['grocery', 'Market', '🛒'],
   ['track', 'Track', '🛵'],
-  ['store', 'Owners', '🏪'],
+  ['store', 'Manage', '🏪'],
 ]
 
 export default function BottomNav() {
   const { view, go } = useApp()
+  // In owner mode the owner nav strip handles navigation; showing the customer
+  // bar underneath it would be two competing navs on one screen.
+  if (view === 'store') return null
   return (
     <nav className="bottomnav" aria-label="Mobile">
       {TABS.map(([v, label, icon]) => (

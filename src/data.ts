@@ -6,11 +6,17 @@ export const DEFAULT_STORE: StoreConfig = {
   tagline: 'Kitchen + market, delivered',
   whatsapp: '15551234567',
   city: 'Downtown',
+  address: '12 Market Street',
+  hours: '11:00 – 23:00',
+  open: true,
   fee: 2.99,
   freeAt: 30,
   currency: '$',
   emoji: '🍔',
   accent: '#ff6a2b',
+  heroImg: '',
+  usdt: 'TXk4qR8vN2pLmW9fZcY7uB1dS5gH3jKaEo',
+  stats: { rating: '4.8★', reviews: '2,300+ reviews', delivery: '25 min' },
 }
 
 export const CATEGORIES: Category[] = [
