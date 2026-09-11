@@ -6,7 +6,7 @@ import { Arrow } from './icons'
 export default function CartDrawer() {
   const {
     cartOpen, setCartOpen, cart, byId, setQty, removeLine, clearCart,
-    subtotal, deliveryFee, total, store, go,
+    subtotal, deliveryFee, total, store, go, table, setTable,
   } = useApp()
 
   const lines = cart.map(l => ({ line: l, item: byId(l.id) })).filter(x => x.item)
@@ -40,18 +40,29 @@ export default function CartDrawer() {
           </div>
         ) : (
           <>
-            <div className="freedl">
-              {remaining > 0 ? (
+            {table ? (
+              <div className="freedl dinein">
                 <p>
-                  Add <b>{money(remaining, store.currency)}</b> more for <b>free delivery</b> 🛵
+                  🪑 Eating in at <b>table {table}</b> — no delivery fee.{' '}
+                  <button className="link" onClick={() => setTable(null)}>
+                    Switch to delivery
+                  </button>
                 </p>
-              ) : (
-                <p>🎉 You’ve unlocked <b>free delivery</b>!</p>
-              )}
-              <div className="freedl-bar">
-                <i style={{ width: `${pct}%` }} className={remaining === 0 ? 'full' : ''} />
               </div>
-            </div>
+            ) : (
+              <div className="freedl">
+                {remaining > 0 ? (
+                  <p>
+                    Add <b>{money(remaining, store.currency)}</b> more for <b>free delivery</b> 🛵
+                  </p>
+                ) : (
+                  <p>🎉 You’ve unlocked <b>free delivery</b>!</p>
+                )}
+                <div className="freedl-bar">
+                  <i style={{ width: `${pct}%` }} className={remaining === 0 ? 'full' : ''} />
+                </div>
+              </div>
+            )}
 
             <ul className="drawer-lines">
               {lines.map(({ line, item }) => (
@@ -84,9 +95,9 @@ export default function CartDrawer() {
                 <span>{money(subtotal, store.currency)}</span>
               </div>
               <div className="drow">
-                <span>Delivery</span>
+                <span>{table ? `Table ${table} · dine-in` : 'Delivery'}</span>
                 <span className={deliveryFee === 0 ? 'free' : ''}>
-                  {deliveryFee === 0 ? 'FREE' : money(deliveryFee, store.currency)}
+                  {deliveryFee === 0 ? (table ? 'No delivery' : 'FREE') : money(deliveryFee, store.currency)}
                 </span>
               </div>
               <div className="drow drow-total">

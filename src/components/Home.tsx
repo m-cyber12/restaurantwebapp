@@ -7,7 +7,11 @@ import { Arrow, WAIcon } from './icons'
 
 export default function Home() {
   const { items, go, setCatFilter, setSearch, store, link } = useApp()
-  const popular = items.filter(i => i.popular && i.kind === 'menu').slice(0, 4)
+  // Owner-pinned products come first, then the built-in popular flags.
+  const popular = items
+    .filter(i => i.kind === 'menu' && (i.featured || i.popular))
+    .sort((a, b) => Number(!!b.featured) - Number(!!a.featured))
+    .slice(0, 4)
   const grocery = items.filter(i => i.kind === 'grocery')
   const menuCats = CATEGORIES.filter(c => c.kind === 'menu')
   const groceryCats = CATEGORIES.filter(c => c.kind === 'grocery')
@@ -133,7 +137,7 @@ export default function Home() {
                 <li><b>Your brand, your rules</b> — your name, your prices, your WhatsApp</li>
               </ul>
               <button className="btn btn-primary" onClick={() => go('store')}>
-                Set up your store <Arrow size={15} />
+                Open the owner dashboard <Arrow size={15} />
               </button>
             </div>
             <div className="owners-qr">

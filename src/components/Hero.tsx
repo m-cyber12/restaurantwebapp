@@ -8,7 +8,7 @@ import Img from './Img'
 import { Arrow, SearchIcon, WAIcon } from './icons'
 
 export default function Hero() {
-  const { store, link, go, search, setSearch, items, setCatFilter } = useApp()
+  const { store, link, go, search, setSearch, items, setCatFilter, table } = useApp()
   const [ti, setTi] = useState(0)
 
   useEffect(() => {
@@ -40,7 +40,9 @@ export default function Hero() {
         <div className="hero-copy">
           <span className="eyebrow">
             <span className="dot-live" aria-hidden />
-            {store.city} · {store.open ? `Open ${store.hours}` : 'Closed now'} · QR &amp; WhatsApp ordering
+            {table
+              ? `Table ${table} · ${store.name}`
+              : store.city} · {store.open ? `Open ${store.hours}` : 'Closed now'} · QR &amp; WhatsApp ordering
           </span>
           <h1>
             Scan. Tap.

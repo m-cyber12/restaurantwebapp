@@ -6,7 +6,7 @@ import Home from './components/Home'
 import CatalogView from './components/CatalogView'
 import CheckoutView from './components/CheckoutView'
 import TrackView from './components/TrackView'
-import StoreView from './components/StoreView'
+import OwnerView from './components/owner/OwnerView'
 import CartDrawer from './components/CartDrawer'
 import ItemModal from './components/ItemModal'
 import Toasts from './components/Toasts'
@@ -22,7 +22,7 @@ function Shell() {
         {view === 'grocery' && <CatalogView kind="grocery" />}
         {view === 'checkout' && <CheckoutView />}
         {view === 'track' && <TrackView />}
-        {view === 'store' && <StoreView />}
+        {view === 'store' && <OwnerView />}
       </main>
       <Footer />
       <BottomNav />

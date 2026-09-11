@@ -10,10 +10,13 @@ export default function ProductCard({ item }: { item: Item }) {
   const cat = CATEGORIES.find(c => c.id === item.category)
 
   return (
-    <article className="pcard" onClick={() => openItem(item.id)} role="button" tabIndex={0}
-      onKeyDown={e => e.key === 'Enter' && openItem(item.id)}
-      aria-label={item.name}
-    >
+    /*
+     * The card itself stays clickable as a convenience, but the *accessible*
+     * affordance is the real <button> on the title. Wrapping the whole card in
+     * role="button" hid the favourite and quantity controls from assistive
+     * tech, because interactive elements cannot nest inside a button.
+     */
+    <article className="pcard" onClick={() => openItem(item.id)}>
       <div className="pcard-media">
         <Img item={item} />
         <div className="pcard-chips">
@@ -50,7 +53,17 @@ export default function ProductCard({ item }: { item: Item }) {
         )}
       </div>
       <div className="pcard-body">
-        <h3>{item.name}</h3>
+        <h3>
+          <button
+            className="pcard-title"
+            onClick={e => {
+              e.stopPropagation()
+              openItem(item.id)
+            }}
+          >
+            {item.name}
+          </button>
+        </h3>
         <p className="pcard-meta">
           {cat ? `${cat.emoji} ${cat.label}` : ''}
           {item.unit ? ` · ${item.unit}` : ''}

@@ -9,15 +9,16 @@ const TABS: Array<[View, string]> = [
   ['menu', 'Menu'],
   ['grocery', 'Grocery'],
   ['track', 'Track order'],
-  ['store', 'For owners'],
+  ['store', 'Manage Store'],
 ]
 
 export default function TopNav() {
   const { view, go, store, cartCount, setCartOpen } = useApp()
+  const owner = view === 'store'
   return (
-    <header className="topnav">
+    <header className={cls('topnav', owner && 'owner')}>
       <div className="wrap topnav-in">
-        <button className="brand" onClick={() => go('home')} aria-label="Home">
+        <button className="brand" onClick={() => go('home')} aria-label="Go to the storefront home">
           <span className="brand-mark">{store.emoji}</span>
           <span className="brand-text">
             <span className="brand-name">{store.name}</span>
@@ -27,17 +28,23 @@ export default function TopNav() {
           </span>
         </button>
 
-        <nav className="tabs" aria-label="Main">
-          {TABS.map(([v, label]) => (
-            <button
-              key={v}
-              className={cls('tab', view === v && 'on')}
-              onClick={() => go(v)}
-            >
-              {label}
-            </button>
-          ))}
-        </nav>
+        {owner ? (
+          <span className="mode-pill" aria-label="Owner mode">
+            <span className="dot-live" aria-hidden /> Owner mode
+          </span>
+        ) : (
+          <nav className="tabs" aria-label="Main">
+            {TABS.map(([v, label]) => (
+              <button
+                key={v}
+                className={cls('tab', view === v && 'on')}
+                onClick={() => go(v)}
+              >
+                {label}
+              </button>
+            ))}
+          </nav>
+        )}
 
         <div className="topnav-actions">
           <a

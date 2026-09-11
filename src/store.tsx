@@ -15,6 +15,7 @@ import type {
   MenuState,
   Order,
   OrderStatus,
+  OwnerTab,
   StoreConfig,
   ToastMsg,
   View,
@@ -24,9 +25,29 @@ import { buildOrderMessage, waDigits, waLink } from './lib/whatsapp'
 
 const VIEWS: View[] = ['home', 'menu', 'grocery', 'checkout', 'track', 'store']
 
+export const OWNER_TABS: OwnerTab[] = [
+  'overview', 'orders', 'menu', 'grocery', 'qr', 'settings', 'appearance',
+]
+
+interface Route {
+  view: View
+  tab: OwnerTab
+}
+
+/** `#/store/orders` → owner mode, Orders panel. Anything unknown → home. */
+function parseHash(): Route {
+  const raw = window.location.hash.replace(/^#\/?/, '').split('?')[0]
+  const [first, second] = raw.split('/')
+  const view = VIEWS.includes(first as View) ? (first as View) : 'home'
+  const tab =
+    view === 'store' && OWNER_TABS.includes(second as OwnerTab)
+      ? (second as OwnerTab)
+      : 'overview'
+  return { view, tab }
+}
+
 function viewFromHash(): View {
-  const p = window.location.hash.replace(/^#\/?/, '').split('?')[0] as View
-  return VIEWS.includes(p) ? p : 'home'
+  return parseHash().view
 }
 
 // ── URL parameters ─────────────────────────────────────────────
@@ -143,6 +164,9 @@ export interface CustomerInfo {
 interface Ctx {
   view: View
   go: (v: View) => void
+  /** Active owner panel while `view === 'store'`. */
+  ownerTab: OwnerTab
+  goOwner: (t: OwnerTab) => void
 
   store: StoreConfig
   setStore: (s: StoreConfig) => void
@@ -165,6 +189,11 @@ interface Ctx {
   updateItem: (id: string, patch: Partial<Item>) => void
   removeItem: (id: string) => void
   resetMenu: () => void
+
+  /** Tables that have their own QR code (plan §10). */
+  tables: string[]
+  addTable: (label: string) => boolean
+  removeTable: (label: string) => void
 
   cart: CartLine[]
   cartCount: number
@@ -226,11 +255,15 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   const scanned = session.current.scanned
   const [table, setTable] = useState<string | null>(session.current.table)
   const [view, setView] = useState<View>(viewFromHash)
+  const [ownerTab, setOwnerTab] = useState<OwnerTab>(() => parseHash().tab)
   const [cart, setCart] = useState<CartLine[]>(() => load('fb_cart', [] as CartLine[]))
   const [favs, setFavs] = useState<string[]>(() => load('fb_favs', [] as string[]))
   const [orders, setOrders] = useState<Order[]>(() => load('fb_orders', [] as Order[]))
   const [focusId, setFocusId] = useState<string | null>(null)
   const [menu, setMenu] = useState<MenuState>(() => readMenu(session.current.store.slug))
+  const [tables, setTables] = useState<string[]>(() =>
+    load(`fb_tables_${session.current.store.slug}`, [] as string[])
+  )
   const [toasts, setToasts] = useState<ToastMsg[]>([])
   const [cartOpen, setCartOpen] = useState(false)
   const [modalId, setModalId] = useState<string | null>(null)
@@ -257,31 +290,43 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     if (!scanned) save('fb_store', store)
   }, [store, scanned])
 
-  // Reload the menu when a different store's QR is opened.
+  // Reload per-store data when a different store's QR is opened.
   useEffect(() => {
     setMenu(readMenu(store.slug))
+    setTables(load(`fb_tables_${store.slug}`, [] as string[]))
   }, [store.slug])
+
+  useEffect(() => save(`fb_tables_${store.slug}`, tables), [store.slug, tables])
 
   // ── router ──────────────────────────────────────────────────
   useEffect(() => {
     const onHash = () => {
-      const v = viewFromHash()
-      setView(prev => (prev === v ? prev : v))
+      const r = parseHash()
+      setView(prev => (prev === r.view ? prev : r.view))
+      setOwnerTab(prev => (prev === r.tab ? prev : r.tab))
     }
     window.addEventListener('hashchange', onHash)
     return () => window.removeEventListener('hashchange', onHash)
   }, [])
 
-  const go = useCallback((v: View) => {
+  const navigate = useCallback((target: string, v: View, t?: OwnerTab) => {
     setCartOpen(false)
     setModalId(null)
-    const target = v === 'home' ? '#/' : `#/${v}`
-    if (window.location.hash !== target) {
-      window.location.hash = target
-    }
+    if (window.location.hash !== target) window.location.hash = target
     setView(v)
+    if (t) setOwnerTab(t)
     window.scrollTo({ top: 0, behavior: 'smooth' })
   }, [])
+
+  const go = useCallback(
+    (v: View) => navigate(v === 'home' ? '#/' : `#/${v}`, v),
+    [navigate]
+  )
+
+  const goOwner = useCallback(
+    (t: OwnerTab) => navigate(`#/store/${t}`, 'store', t),
+    [navigate]
+  )
 
   // ── live order simulation ───────────────────────────────────
   useEffect(() => {
@@ -312,8 +357,9 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     [cart, byId]
   )
   const deliveryFee = useMemo(
-    () => (cart.length === 0 || subtotal >= store.freeAt ? 0 : store.fee),
-    [cart.length, subtotal, store]
+    // Dine-in at a table is never charged delivery.
+    () => (cart.length === 0 || table ? 0 : subtotal >= store.freeAt ? 0 : store.fee),
+    [cart.length, subtotal, store, table]
   )
   const total = subtotal + deliveryFee
 
@@ -353,6 +399,23 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
 
   const resetMenu = useCallback(() => setMenu({ ...EMPTY_MENU }), [])
 
+  // ── table QR codes (plan §10) ───────────────────────────────
+  const addTable = useCallback((label: string): boolean => {
+    const clean = cleanTable(label)
+    if (!clean) return false
+    let added = false
+    setTables(ts => {
+      if (ts.some(t => t.toLowerCase() === clean.toLowerCase())) return ts
+      added = true
+      return [...ts, clean].slice(0, 100)
+    })
+    return added || !tables.some(t => t.toLowerCase() === clean.toLowerCase())
+  }, [tables])
+
+  const removeTable = useCallback((label: string) => {
+    setTables(ts => ts.filter(t => t !== label))
+  }, [])
+
   // ── actions ─────────────────────────────────────────────────
   const toast = useCallback((text: string, icon?: string) => {
     const id = toastSeq++
@@ -375,6 +438,10 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   const addToCart = useCallback(
     (id: string, qty = 1) => {
       if (byId(id)?.available === false) return
+      if (!store.open) {
+        toast(`${store.name} is closed right now`, '🔴')
+        return
+      }
       setCart(c => {
         const line = c.find(l => l.id === id)
         if (line) return c.map(l => (l.id === id ? { ...l, qty: l.qty + qty } : l))
@@ -382,7 +449,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       })
       toast(`${byId(id)?.name ?? 'Item'} added to cart`, '🛒')
     },
-    [byId, toast]
+    [byId, toast, store.open, store.name]
   )
 
   const setQty = useCallback((id: string, qty: number) => {
@@ -434,7 +501,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       }
     ): Order | null => {
       const lines = cart.filter(l => byId(l.id))
-      if (lines.length === 0) return null
+      if (lines.length === 0 || !store.open) return null
       const prefix =
         store.slug.replace(/[^a-z]/gi, '').slice(0, 2).toUpperCase() || 'FB'
       const channel = info.channel ?? (table ? 'table' : 'delivery')
@@ -484,6 +551,8 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   const value: Ctx = {
     view,
     go,
+    ownerTab,
+    goOwner,
     store,
     setStore,
     scanned,
@@ -499,6 +568,9 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     updateItem,
     removeItem,
     resetMenu,
+    tables,
+    addTable,
+    removeTable,
     cart,
     cartCount,
     subtotal,

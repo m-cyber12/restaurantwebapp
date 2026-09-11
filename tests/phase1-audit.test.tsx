@@ -32,7 +32,7 @@ describe('P0-1 · Navigation: every nav target resolves to a real view', () => {
   it('renders the home view and all top-nav tabs', () => {
     renderApp()
     expect(screen.getByRole('heading', { level: 1 })).toBeInTheDocument()
-    for (const label of ['Home', 'Menu', 'Grocery', 'Track order', 'For owners']) {
+    for (const label of ['Home', 'Menu', 'Grocery', 'Track order', 'Manage Store']) {
       expect(screen.getAllByRole('button', { name: new RegExp(label, 'i') }).length).toBeGreaterThan(0)
     }
   })
@@ -45,8 +45,9 @@ describe('P0-1 · Navigation: every nav target resolves to a real view', () => {
     expect($('.page-head h2')!.textContent).toBe('The Market')
     fireEvent.click(topBtn(/^Track order$/))
     expect(screen.getByRole('heading', { name: /Track your order|No orders yet/i })).toBeInTheDocument()
-    fireEvent.click(topBtn(/^For owners$/))
-    expect(screen.getByText(/Put your menu on every table/i)).toBeInTheDocument()
+    fireEvent.click(topBtn(/^Manage Store$/))
+    expect(screen.getByRole('heading', { level: 2, name: 'Overview' })).toBeInTheDocument()
+    expect($('.ownernav')).toBeTruthy()
   })
 
   it('unknown hash routes fall back to home (no blank screen)', () => {
@@ -326,7 +327,7 @@ describe('P0-6 · WhatsApp ordering', () => {
 
 describe('P0-7 · QR generation', () => {
   it('renders a canvas per QR and the owner QR carries the store slug', () => {
-    renderApp('http://localhost:3000/#/store')
+    renderApp('http://localhost:3000/#/store/qr')
     const canvases = $$('canvas')
     expect(canvases.length).toBeGreaterThan(0)
     // the main downloadable QR must exist with the id the download button looks up
@@ -334,7 +335,7 @@ describe('P0-7 · QR generation', () => {
   })
 
   it('the QR encodes a URL that re-creates this store', () => {
-    renderApp('http://localhost:3000/#/store')
+    renderApp('http://localhost:3000/#/store/qr')
     const linkEl = $('.qr-link')
     expect(linkEl).toBeTruthy()
     const url = new URL(linkEl!.textContent!)
@@ -353,29 +354,36 @@ describe('P0-7 · QR generation', () => {
 })
 
 describe('P0-8 · Owner setup', () => {
-  it('renaming the store rebrands the storefront and the QR link', () => {
-    renderApp('http://localhost:3000/#/store')
-    const nameInput = screen.getByPlaceholderText('Fresh Bites')
-    fireEvent.change(nameInput, { target: { value: "Mama Rosa's Pizzeria" } })
-    // persisted
+  it('renaming the store rebrands the storefront', () => {
+    renderApp('http://localhost:3000/#/store/settings')
+    fireEvent.change(screen.getByPlaceholderText('Fresh Bites'), { target: { value: "Mama Rosa's Pizzeria" } })
     const saved = JSON.parse(localStorage.getItem('fb_store')!)
     expect(saved.name).toBe("Mama Rosa's Pizzeria")
     expect(saved.slug).toBe('mama-rosas-pizzeria')
-    // QR link follows
+    expect(within($('.topnav') as HTMLElement).getByText(/Mama Rosa's Pizzeria/)).toBeInTheDocument()
+  })
+
+  it('the QR link follows a rename', () => {
+    renderApp('http://localhost:3000/#/store/qr')
+    fireEvent.click(within($('.ownernav') as HTMLElement).getByRole('button', { name: /Settings/ }))
+    fireEvent.change(screen.getByPlaceholderText('Fresh Bites'), { target: { value: "Mama Rosa's Pizzeria" } })
+    fireEvent.click(within($('.ownernav') as HTMLElement).getByRole('button', { name: /QR Codes/ }))
     expect($('.qr-link')!.textContent).toContain('mama-rosas-pizzeria')
   })
 
   it('changing the WhatsApp number changes every wa.me link', () => {
-    renderApp('http://localhost:3000/#/store')
+    renderApp('http://localhost:3000/#/store/settings')
     fireEvent.change(screen.getByPlaceholderText('15551234567'), { target: { value: '393339998888' } })
-    fireEvent.click(topBtn(/^Home$/))
+    fireEvent.click(within($('.ownernav') as HTMLElement).getByRole('button', { name: /Overview/ }))
+    fireEvent.click(screen.getByRole('button', { name: /View storefront/ }))
     const wa = $('a.btn-wa')!.getAttribute('href')!
     expect(wa).toContain('wa.me/393339998888')
   })
 
   it('changing the delivery fee changes the cart total', () => {
-    renderApp('http://localhost:3000/#/store')
+    renderApp('http://localhost:3000/#/store/settings')
     fireEvent.change(screen.getByDisplayValue('2.99'), { target: { value: '5' } })
+    fireEvent.click(screen.getByRole('button', { name: /View storefront/ }))
     fireEvent.click(topBtn(/^Menu$/))
     fireEvent.click($$('article.pcard button.quick-add')[0])
     fireEvent.click(screen.getByRole('button', { name: /Open cart/i }))
@@ -383,51 +391,114 @@ describe('P0-8 · Owner setup', () => {
   })
 
   it('currency switch re-labels all prices', () => {
-    renderApp('http://localhost:3000/#/store')
+    renderApp('http://localhost:3000/#/store/settings')
     fireEvent.change(screen.getByDisplayValue('$'), { target: { value: '€' } })
+    fireEvent.click(screen.getByRole('button', { name: /View storefront/ }))
     fireEvent.click(topBtn(/^Menu$/))
     expect($('.price')!.textContent).toBe('€12.90')
   })
 
   it('owner-added product appears in the customer menu (Scenario D)', () => {
-    renderApp('http://localhost:3000/#/store')
-    const form = $('.add-item') as HTMLFormElement
-    fireEvent.change(within(form).getByPlaceholderText(/Item name/), { target: { value: 'Truffle Fries' } })
-    fireEvent.change(within(form).getByPlaceholderText(/Price/), { target: { value: '7.5' } })
+    renderApp('http://localhost:3000/#/store/menu')
+    fireEvent.click(screen.getByRole('button', { name: /\+ Add product/ }))
+    const form = $('.pform') as HTMLFormElement
+    fireEvent.change(within(form).getByPlaceholderText('Truffle Fries'), { target: { value: 'Truffle Fries' } })
+    fireEvent.change(within(form).getByPlaceholderText('7.50'), { target: { value: '7.5' } })
     fireEvent.submit(form)
+    fireEvent.click(screen.getByRole('button', { name: /View storefront/ }))
     fireEvent.click(topBtn(/^Menu$/))
-    const names = $$('article.pcard h3').map(h => h.textContent)
-    expect(names).toContain('Truffle Fries')
+    expect($$('article.pcard h3').map(h => h.textContent)).toContain('Truffle Fries')
   })
 
   it('owner-added product persists across a reload', () => {
-    const r = renderApp('http://localhost:3000/#/store')
-    const form = $('.add-item') as HTMLFormElement
-    fireEvent.change(within(form).getByPlaceholderText(/Item name/), { target: { value: 'Truffle Fries' } })
-    fireEvent.change(within(form).getByPlaceholderText(/Price/), { target: { value: '7.5' } })
+    const r = renderApp('http://localhost:3000/#/store/menu')
+    fireEvent.click(screen.getByRole('button', { name: /\+ Add product/ }))
+    const form = $('.pform') as HTMLFormElement
+    fireEvent.change(within(form).getByPlaceholderText('Truffle Fries'), { target: { value: 'Truffle Fries' } })
+    fireEvent.change(within(form).getByPlaceholderText('7.50'), { target: { value: '7.5' } })
     fireEvent.submit(form)
     r.unmount()
     renderApp('http://localhost:3000/#/menu')
     expect($$('article.pcard h3').map(h => h.textContent)).toContain('Truffle Fries')
   })
 
-  it('owner can delete a custom product', () => {
-    renderApp('http://localhost:3000/#/store')
-    const form = $('.add-item') as HTMLFormElement
-    fireEvent.change(within(form).getByPlaceholderText(/Item name/), { target: { value: 'Truffle Fries' } })
-    fireEvent.change(within(form).getByPlaceholderText(/Price/), { target: { value: '7.5' } })
+  it('owner can edit a product price', () => {
+    renderApp('http://localhost:3000/#/store/menu')
+    fireEvent.click(within($$('.prow')[0] as HTMLElement).getByRole('button', { name: /^Edit$/ }))
+    const form = $('.pform') as HTMLFormElement
+    const price = within(form).getByPlaceholderText('7.50') as HTMLInputElement
+    expect(price.value).toBe('12.9')
+    fireEvent.change(price, { target: { value: '9.99' } })
     fireEvent.submit(form)
-    fireEvent.click(screen.getByRole('button', { name: /Delete Truffle Fries/ }))
-    const menu = $$('.menu-list .ml-name').map(e => e.textContent)
-    expect(menu).not.toContain('Truffle Fries')
+    expect($$('.prow-price')[0].textContent).toBe('$9.99')
   })
 
-  it('rejects an item with no name / bad price', () => {
-    renderApp('http://localhost:3000/#/store')
-    const form = $('.add-item') as HTMLFormElement
-    fireEvent.change(within(form).getByPlaceholderText(/Price/), { target: { value: '-5' } })
+  it('owner can disable and re-enable a product', () => {
+    renderApp('http://localhost:3000/#/store/menu')
+    fireEvent.click(within($$('.prow')[0] as HTMLElement).getByRole('button', { name: /^Disable$/ }))
+    expect($$('.prow-status')[0].textContent).toBe('Unavailable')
+    fireEvent.click(within($$('.prow')[0] as HTMLElement).getByRole('button', { name: /^Enable$/ }))
+    expect($$('.prow-status')[0].textContent).toBe('Available')
+  })
+
+  it('a disabled product disappears from the customer menu', () => {
+    const r = renderApp('http://localhost:3000/#/store/menu')
+    fireEvent.click(within($$('.prow')[0] as HTMLElement).getByRole('button', { name: /^Disable$/ }))
+    r.unmount()
+    renderApp('http://localhost:3000/#/menu')
+    const names = $$('article.pcard h3').map(h => h.textContent)
+    expect(names).not.toContain('Double Smash Burger')
+  })
+
+  it('owner can delete a custom product', () => {
+    renderApp('http://localhost:3000/#/store/menu')
+    fireEvent.click(screen.getByRole('button', { name: /\+ Add product/ }))
+    const form = $('.pform') as HTMLFormElement
+    fireEvent.change(within(form).getByPlaceholderText('Truffle Fries'), { target: { value: 'Truffle Fries' } })
+    fireEvent.change(within(form).getByPlaceholderText('7.50'), { target: { value: '7.5' } })
     fireEvent.submit(form)
-    expect($$('.menu-list li').length).toBe(CATALOG.length)
+    fireEvent.click(screen.getByRole('button', { name: /Delete Truffle Fries/ }))
+    expect($$('.prow-main b').map(e => e.textContent).join()).not.toContain('Truffle Fries')
+  })
+
+  it('rejects a product with no name', () => {
+    renderApp('http://localhost:3000/#/store/menu')
+    const before = $$('.prow').length
+    fireEvent.click(screen.getByRole('button', { name: /\+ Add product/ }))
+    const form = $('.pform') as HTMLFormElement
+    fireEvent.change(within(form).getByPlaceholderText('7.50'), { target: { value: '5' } })
+    fireEvent.submit(form)
+    expect(screen.getByRole('alert').textContent).toMatch(/name/i)
+    expect($$('.prow').length).toBe(before)
+  })
+
+  it('rejects a negative price', () => {
+    renderApp('http://localhost:3000/#/store/menu')
+    const before = $$('.prow').length
+    fireEvent.click(screen.getByRole('button', { name: /\+ Add product/ }))
+    const form = $('.pform') as HTMLFormElement
+    fireEvent.change(within(form).getByPlaceholderText('Truffle Fries'), { target: { value: 'Bad Price' } })
+    fireEvent.change(within(form).getByPlaceholderText('7.50'), { target: { value: '-5' } })
+    fireEvent.submit(form)
+    expect(screen.getByRole('alert').textContent).toMatch(/price/i)
+    expect($$('.prow').length).toBe(before)
+  })
+
+  it('rejects an absurd price', () => {
+    renderApp('http://localhost:3000/#/store/menu')
+    fireEvent.click(screen.getByRole('button', { name: /\+ Add product/ }))
+    const form = $('.pform') as HTMLFormElement
+    fireEvent.change(within(form).getByPlaceholderText('Truffle Fries'), { target: { value: 'Gold Bar' } })
+    fireEvent.change(within(form).getByPlaceholderText('7.50'), { target: { value: '9999999' } })
+    fireEvent.submit(form)
+    expect(screen.getByRole('alert').textContent).toMatch(/too high/i)
+  })
+
+  it('the grocery tab manages market products separately', () => {
+    renderApp('http://localhost:3000/#/store/grocery')
+    const names = $$('.prow-main b').map(e => e.textContent)
+    expect(names.join()).toContain('Avocados')
+    expect(names.join()).not.toContain('Double Smash Burger')
   })
 })
 
@@ -508,7 +579,7 @@ describe('P0-11 · Validation & edge cases', () => {
   })
 
   it('phone input accepts only sane characters in the owner form', () => {
-    renderApp('http://localhost:3000/#/store')
+    renderApp('http://localhost:3000/#/store/settings')
     fireEvent.change(screen.getByPlaceholderText('15551234567'), { target: { value: 'abc<script>12' } })
     expect(screen.getByPlaceholderText('15551234567')).toHaveValue('12')
   })
@@ -660,10 +731,11 @@ describe('P2 · R1 single data path for products', () => {
 
 describe('P2 · R2 no hard-coded demo values left in components', () => {
   it('the USDT address comes from store config', () => {
-    renderApp('http://localhost:3000/#/store')
-    fireEvent.change(screen.getByDisplayValue('$'), { target: { value: '$' } })
-    const saved = JSON.parse(localStorage.getItem('fb_store')!)
-    expect(saved.usdt).toBeTruthy()
+    renderApp('http://localhost:3000/#/store/settings')
+    const wallet = screen.getByPlaceholderText('T…')
+    expect(wallet).toHaveValue('TXk4qR8vN2pLmW9fZcY7uB1dS5gH3jKaEo')
+    fireEvent.change(wallet, { target: { value: 'TMyOwnWallet123' } })
+    expect(JSON.parse(localStorage.getItem('fb_store')!).usdt).toBe('TMyOwnWallet123')
   })
   it('hours and stats come from store config', () => {
     renderApp('http://localhost:3000/#/')
@@ -690,7 +762,7 @@ describe('P2 · scanning a QR must not clobber the owner’s saved settings', ()
   })
 
   it('the owner’s own edits still persist', () => {
-    renderApp('http://localhost:3000/#/store')
+    renderApp('http://localhost:3000/#/store/settings')
     fireEvent.change(screen.getByPlaceholderText('Fresh Bites'), { target: { value: 'My Diner' } })
     expect(JSON.parse(localStorage.getItem('fb_store')!).name).toBe('My Diner')
   })
