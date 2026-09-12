@@ -254,7 +254,9 @@ describe('P0-6 · WhatsApp ordering', () => {
   it('builds an itemised, totalled message', () => {
     const store: StoreConfig = {
       slug: 'fresh-bites', name: 'Fresh Bites', tagline: 't', whatsapp: '15551234567',
-      city: 'Downtown', fee: 2.99, freeAt: 30, currency: '$', emoji: '🍔', accent: '#ff6a2b',
+      city: 'Downtown', address: '12 Market Street', hours: '11:00 – 23:00', open: true,
+      fee: 2.99, freeAt: 30, currency: '$', emoji: '🍔', accent: '#ff6a2b',
+      heroImg: '', usdt: '', stats: { rating: '4.9', reviews: '2,300+ reviews', delivery: '~25 min' },
     }
     const byId = (id: string) => CATALOG.find(i => i.id === id)
     const order = {

@@ -20,7 +20,7 @@ import type {
   ToastMsg,
   View,
 } from './types'
-import { load, save, shade, slugify } from './lib/util'
+import { load, readableOn, save, shade, slugify } from './lib/util'
 import { buildOrderMessage, waDigits, waLink } from './lib/whatsapp'
 
 const VIEWS: View[] = ['home', 'menu', 'grocery', 'checkout', 'track', 'store']
@@ -276,7 +276,9 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     const root = document.documentElement
     root.style.setProperty('--accent', store.accent)
-    root.style.setProperty('--accent2', shade(store.accent, 0.42))
+    root.style.setProperty('--accent-2', shade(store.accent, 0.42))
+    // Any accent the owner picks still has to carry readable button text.
+    root.style.setProperty('--on-accent', readableOn(store.accent))
   }, [store.accent])
 
   // ── persistence ─────────────────────────────────────────────

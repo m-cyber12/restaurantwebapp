@@ -3,13 +3,59 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
-    <meta name="theme-color" content="#0a0c10" />
-    <meta name="description" content="Fresh Bites — restaurant, food delivery & grocery ordering. Scan the table QR, build your cart, and send your order straight to our WhatsApp." />
-    <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🍔</text></svg>" />
+    <meta name="theme-color" content="#0c0a09" />
+    <meta name="color-scheme" content="dark" />
+
+    <title>Fresh Bites — Restaurant · Grocery · WhatsApp QR Ordering</title>
+    <meta
+      name="description"
+      content="Fresh Bites is a QR ordering storefront: scan the code on any table or shelf, build one cart with restaurant dishes and groceries, and the order lands on the restaurant's WhatsApp. No app, no sign-up — plus a full owner dashboard with menu management, table QR codes and live order tracking."
+    />
+    <meta name="author" content="Fresh Bites" />
+    <link rel="canonical" href="https://m-cyber12.github.io/restaurantwebapp/" />
+
+    <!-- Open Graph / social -->
+    <meta property="og:type" content="website" />
+    <meta property="og:site_name" content="Fresh Bites" />
+    <meta property="og:title" content="Fresh Bites — scan, order, we confirm on WhatsApp" />
+    <meta
+      property="og:description"
+      content="Restaurant dishes and daily groceries in one cart. Scan the table QR, order in seconds, and the order arrives formatted on WhatsApp. Built for restaurant owners: your menu on every table."
+    />
+    <meta property="og:image" content="img/hero.jpg" />
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta name="twitter:title" content="Fresh Bites — QR & WhatsApp ordering" />
+    <meta
+      name="twitter:description"
+      content="Scan the table QR, build your cart, order via WhatsApp. Restaurant menu and grocery market in one storefront."
+    />
+    <meta name="twitter:image" content="img/hero.jpg" />
+
+    <link
+      rel="icon"
+      href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🍔</text></svg>"
+    />
+
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-    <link href="https://fonts.googleapis.com/css2?family=Sora:wght@500;600;700;800&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" />
-    <title>Fresh Bites — Restaurant · Grocery · WhatsApp QR Ordering</title>
+    <link
+      href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,700;12..96,800&family=Manrope:wght@400;500;600;700;800&display=swap"
+      rel="stylesheet"
+    />
+
+    <script type="application/ld+json">
+      {
+        "@context": "https://schema.org",
+        "@type": "Restaurant",
+        "name": "Fresh Bites",
+        "description": "QR and WhatsApp ordering storefront with a restaurant menu and a grocery market in one cart.",
+        "servesCuisine": ["Burgers", "Pizza", "Sushi", "Salads", "Desserts"],
+        "address": { "@type": "PostalAddress", "streetAddress": "12 Market Street", "addressLocality": "Downtown" },
+        "openingHours": "Mo-Su 11:00-23:00",
+        "acceptsReservations": "False",
+        "hasMenu": "https://m-cyber12.github.io/restaurantwebapp/#/menu"
+      }
+    </script>
   </head>
   <body>
     <div id="root"></div>

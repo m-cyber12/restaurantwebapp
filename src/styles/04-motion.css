@@ -1,0 +1,264 @@
+/* ═══════════════════════════════════════════════════════════════
+   MOTION — reveal system, keyframes, reduced-motion contract.
+   Everything animates transform / opacity / clip-path only.
+   ═══════════════════════════════════════════════════════════════ */
+
+/* ── reveal on scroll ────────────────────────────────────────── */
+.reveal {
+  --reveal-delay: 0ms;
+  transition:
+    opacity var(--d5) var(--e-out) var(--reveal-delay),
+    transform var(--d5) var(--e-out) var(--reveal-delay),
+    clip-path var(--d5) var(--e-out) var(--reveal-delay);
+  will-change: opacity, transform;
+}
+
+.reveal:not(.in) {
+  opacity: 0;
+}
+
+.reveal-up:not(.in) {
+  transform: translate3d(0, 26px, 0);
+}
+
+.reveal-fade:not(.in) {
+  transform: none;
+}
+
+.reveal-scale:not(.in) {
+  transform: scale(0.94);
+}
+
+.reveal-left:not(.in) {
+  transform: translate3d(-28px, 0, 0);
+}
+
+.reveal-right:not(.in) {
+  transform: translate3d(28px, 0, 0);
+}
+
+.reveal-clip:not(.in) {
+  clip-path: inset(0 0 100% 0);
+  transform: none;
+}
+
+/* Once revealed, stop paying for the compositor layer. */
+.reveal.in {
+  will-change: auto;
+}
+
+/* ── view transition ─────────────────────────────────────────── */
+@keyframes view-in {
+  from {
+    opacity: 0;
+    transform: translate3d(0, 12px, 0);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+/* ── keyframes ───────────────────────────────────────────────── */
+@keyframes pulse-ring {
+  0% {
+    transform: scale(0.7);
+    opacity: 0.7;
+  }
+  70% {
+    transform: scale(1.9);
+    opacity: 0;
+  }
+  100% {
+    transform: scale(1.9);
+    opacity: 0;
+  }
+}
+
+@keyframes toast-in {
+  from {
+    opacity: 0;
+    transform: translate3d(0, 14px, 0) scale(0.96);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+@keyframes marquee-x {
+  from {
+    transform: translate3d(0, 0, 0);
+  }
+  to {
+    transform: translate3d(-33.3333%, 0, 0);
+  }
+}
+
+@keyframes float-y {
+  0%,
+  100% {
+    transform: translate3d(0, 0, 0);
+  }
+  50% {
+    transform: translate3d(0, -9px, 0);
+  }
+}
+
+@keyframes steam-rise {
+  0% {
+    opacity: 0;
+    transform: translate3d(0, 6px, 0) scaleX(0.8);
+  }
+  35% {
+    opacity: 0.55;
+  }
+  100% {
+    opacity: 0;
+    transform: translate3d(0, -34px, 0) scaleX(1.35);
+  }
+}
+
+@keyframes badge-pop {
+  0% {
+    transform: scale(0.5);
+  }
+  55% {
+    transform: scale(1.24);
+  }
+  100% {
+    transform: scale(1);
+  }
+}
+
+@keyframes flash-add {
+  0% {
+    box-shadow: 0 0 0 0 color-mix(in srgb, var(--accent) 60%, transparent);
+  }
+  100% {
+    box-shadow: 0 0 0 14px color-mix(in srgb, var(--accent) 0%, transparent);
+  }
+}
+
+@keyframes fly-to-cart {
+  0% {
+    opacity: 1;
+    transform: translate3d(0, 0, 0) scale(1);
+  }
+  60% {
+    opacity: 1;
+    transform: translate3d(calc(var(--dx) * 0.55), calc(var(--dy) * 0.5 - 90px), 0) scale(1.35);
+  }
+  100% {
+    opacity: 0;
+    transform: translate3d(var(--dx), var(--dy), 0) scale(0.4);
+  }
+}
+
+@keyframes slide-in-right {
+  from {
+    transform: translate3d(100%, 0, 0);
+  }
+  to {
+    transform: none;
+  }
+}
+
+@keyframes sheet-up {
+  from {
+    transform: translate3d(0, 100%, 0);
+  }
+  to {
+    transform: none;
+  }
+}
+
+@keyframes scan-sweep {
+  0% {
+    transform: translateY(-120%);
+    opacity: 0;
+  }
+  18% {
+    opacity: 1;
+  }
+  82% {
+    opacity: 1;
+  }
+  100% {
+    transform: translateY(320%);
+    opacity: 0;
+  }
+}
+
+@keyframes spin-slow {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+@keyframes rider-bob {
+  0%,
+  100% {
+    transform: translate3d(-50%, -50%, 0) rotate(-4deg);
+  }
+  50% {
+    transform: translate3d(-50%, -62%, 0) rotate(4deg);
+  }
+}
+
+@keyframes grow-bar {
+  from {
+    transform: scaleY(0.04);
+  }
+  to {
+    transform: scaleY(1);
+  }
+}
+
+@keyframes caret-blink {
+  0%,
+  49% {
+    opacity: 1;
+  }
+  50%,
+  100% {
+    opacity: 0;
+  }
+}
+
+@keyframes shimmer {
+  from {
+    background-position: -180% 0;
+  }
+  to {
+    background-position: 180% 0;
+  }
+}
+
+/* ── reduced motion: kill movement, keep meaning ─────────────── */
+@media (prefers-reduced-motion: reduce) {
+  html {
+    scroll-behavior: auto;
+  }
+
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+
+  /* reveals resolve to their end state — content is never hidden */
+  .reveal,
+  .reveal:not(.in) {
+    opacity: 1 !important;
+    transform: none !important;
+    clip-path: none !important;
+  }
+
+  .fly-dot {
+    display: none !important;
+  }
+}
