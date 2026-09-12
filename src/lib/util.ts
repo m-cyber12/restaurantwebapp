@@ -22,6 +22,23 @@ export function shade(hex: string, amt: number): string {
   return `#${((1 << 24) | (r << 16) | (g << 8) | b).toString(16).slice(1)}`
 }
 
+/**
+ * Black or white text for a given background, by relative luminance.
+ * The owner can pick any accent colour, so the label on top of it has to be
+ * chosen rather than assumed.
+ */
+export function readableOn(hex: string): string {
+  const h = hex.replace('#', '')
+  const full = h.length === 3 ? h.split('').map(c => c + c).join('') : h
+  const num = parseInt(full, 16)
+  if (!Number.isFinite(num)) return '#1a0c02'
+  const r = (num >> 16) & 255
+  const g = (num >> 8) & 255
+  const b = num & 255
+  const lum = (0.2126 * r + 0.7152 * g + 0.0722 * b) / 255
+  return lum > 0.62 ? '#1a0c02' : '#fffaf5'
+}
+
 export function load<T>(key: string, fallback: T): T {
   try {
     const s = localStorage.getItem(key)

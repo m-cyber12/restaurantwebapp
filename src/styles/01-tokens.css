@@ -1,0 +1,153 @@
+/* ═══════════════════════════════════════════════════════════════
+   FRESH BITES · DESIGN TOKENS
+   One source of truth for colour, type, space, radius, depth,
+   motion and layout. Nothing in the app uses a raw value that
+   has a token — change a token, change the whole product.
+   ═══════════════════════════════════════════════════════════════ */
+
+:root {
+  /* ── surfaces (warm charcoal, never pure black) ─────────────── */
+  --bg: #0c0a09;
+  --bg-2: #110e0d;
+  --surface: #191616;
+  --surface-2: #211d1d;
+  --surface-3: #2b2626;
+
+  /* ── light "paper" surfaces for editorial sections ──────────── */
+  --paper: #f7f0e6;
+  --paper-2: #ece1d2;
+  --paper-ink: #1b1512;
+  --paper-muted: #6f6157;
+
+  /* ── lines ─────────────────────────────────────────────────── */
+  --line: rgba(255, 244, 235, 0.09);
+  --line-2: rgba(255, 244, 235, 0.16);
+  --line-3: rgba(255, 244, 235, 0.26);
+
+  /* ── text ──────────────────────────────────────────────────── */
+  --text: #fcf8f5;
+  --text-2: #bdb3ac;
+  --text-3: #8d837d;
+  --text-inv: #1b1512;
+
+  /* ── brand accents ─────────────────────────────────────────── */
+  /* --accent / --accent-2 / --on-accent are written by the store  */
+  /* from the owner's brand colour (see src/store.tsx).            */
+  --accent: #ff6a2b;
+  --accent-2: #ffb45e;
+  --on-accent: #1a0c02;
+  --accent-soft: color-mix(in srgb, var(--accent) 14%, transparent);
+  --accent-line: color-mix(in srgb, var(--accent) 42%, transparent);
+  --accent-ink: color-mix(in srgb, var(--accent) 78%, #ffffff);
+
+  /* ── functional colours ────────────────────────────────────── */
+  --wa: #25d366;
+  --wa-2: #6cf0a0;
+  --wa-soft: rgba(37, 211, 102, 0.14);
+  --wa-line: rgba(37, 211, 102, 0.42);
+  --ok: #4ade80;
+  --warn: #fbbf24;
+  --danger: #fb7185;
+  --danger-soft: rgba(251, 113, 133, 0.14);
+
+  /* ── typography ────────────────────────────────────────────── */
+  --font-display: 'Bricolage Grotesque', 'Sora', system-ui, -apple-system, sans-serif;
+  --font-body: 'Manrope', 'Inter', system-ui, -apple-system, sans-serif;
+  --font-mono: ui-monospace, 'SF Mono', SFMono-Regular, 'JetBrains Mono', Menlo, Consolas, monospace;
+
+  /* fluid type scale — one clamp per step, no magic sizes */
+  --fs-mega: clamp(2.9rem, 9.2vw, 7.2rem);
+  --fs-display: clamp(2.1rem, 5.4vw, 4.4rem);
+  --fs-h2: clamp(1.7rem, 3.5vw, 2.9rem);
+  --fs-h3: clamp(1.12rem, 1.6vw, 1.45rem);
+  --fs-h4: clamp(0.98rem, 1.1vw, 1.1rem);
+  --fs-lead: clamp(1rem, 1.2vw, 1.19rem);
+  --fs-body: 0.95rem;
+  --fs-sm: 0.855rem;
+  --fs-xs: 0.76rem;
+  --fs-2xs: 0.685rem;
+
+  --lh-tight: 1.04;
+  --lh-snug: 1.22;
+  --lh-body: 1.62;
+  --tracking-tight: -0.035em;
+  --tracking-snug: -0.018em;
+  --tracking-wide: 0.14em;
+
+  /* ── spacing (4px base) ────────────────────────────────────── */
+  --s1: 4px;
+  --s2: 8px;
+  --s3: 12px;
+  --s4: 16px;
+  --s5: 24px;
+  --s6: 32px;
+  --s7: 48px;
+  --s8: 64px;
+  --s9: 96px;
+  --s10: 128px;
+
+  /* ── radius ────────────────────────────────────────────────── */
+  --r-xs: 8px;
+  --r-sm: 12px;
+  --r-md: 16px;
+  --r-lg: 22px;
+  --r-xl: 30px;
+  --r-2xl: 40px;
+  --r-full: 999px;
+
+  /* ── depth ─────────────────────────────────────────────────── */
+  --sh-1: 0 1px 2px rgba(0, 0, 0, 0.45);
+  --sh-2: 0 10px 28px -14px rgba(0, 0, 0, 0.75), 0 2px 6px -3px rgba(0, 0, 0, 0.45);
+  --sh-3: 0 28px 64px -26px rgba(0, 0, 0, 0.85), 0 10px 24px -16px rgba(0, 0, 0, 0.55);
+  --sh-4: 0 44px 96px -32px rgba(0, 0, 0, 0.9), 0 14px 34px -20px rgba(0, 0, 0, 0.6);
+  --sh-accent: 0 14px 36px -14px color-mix(in srgb, var(--accent) 62%, transparent);
+  --sh-wa: 0 14px 34px -14px rgba(37, 211, 102, 0.55);
+  --inset: inset 0 1px 0 rgba(255, 255, 255, 0.05);
+
+  /* ── motion ────────────────────────────────────────────────── */
+  --d1: 120ms;
+  --d2: 220ms;
+  --d3: 380ms;
+  --d4: 620ms;
+  --d5: 900ms;
+  --e-out: cubic-bezier(0.22, 1, 0.36, 1);
+  --e-spring: cubic-bezier(0.34, 1.42, 0.5, 1);
+  --e-io: cubic-bezier(0.65, 0, 0.35, 1);
+  --e-soft: cubic-bezier(0.4, 0, 0.2, 1);
+
+  /* ── layout ────────────────────────────────────────────────── */
+  --wrap: 1280px;
+  --gutter: clamp(16px, 4.2vw, 44px);
+  --nav-h: 74px;
+  --section-y: clamp(60px, 9vw, 136px);
+  --grid-gap: clamp(12px, 1.6vw, 22px);
+
+  /* ── texture ───────────────────────────────────────────────── */
+  --noise: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.82' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='160' height='160' filter='url(%23n)' opacity='.42'/%3E%3C/svg%3E");
+
+  /* ── a11y ──────────────────────────────────────────────────── */
+  --focus-ring: 2px solid var(--accent-ink);
+  --focus-offset: 3px;
+  --touch: 44px;
+}
+
+/* The cream sections flip the token set for everything inside them, so
+   components do not need a parallel "light" implementation. */
+.paper-surface {
+  --bg: var(--paper);
+  --bg-2: var(--paper-2);
+  --surface: #fffcf7;
+  --surface-2: #f4ece1;
+  --surface-3: #e8dccd;
+  --line: rgba(27, 21, 18, 0.12);
+  --line-2: rgba(27, 21, 18, 0.2);
+  --line-3: rgba(27, 21, 18, 0.32);
+  --text: var(--paper-ink);
+  --text-2: #57493f;
+  --text-3: #7d6f64;
+  --text-inv: #fff8f0;
+  --sh-1: 0 1px 2px rgba(60, 40, 25, 0.08);
+  --sh-2: 0 12px 28px -16px rgba(60, 40, 25, 0.28), 0 2px 6px -3px rgba(60, 40, 25, 0.12);
+  --sh-3: 0 30px 64px -28px rgba(60, 40, 25, 0.34), 0 10px 22px -16px rgba(60, 40, 25, 0.2);
+  --inset: inset 0 1px 0 rgba(255, 255, 255, 0.7);
+}

@@ -1,13 +1,19 @@
 import { useMemo, useState } from 'react'
+import type { CSSProperties } from 'react'
 import { STAGES, etaText, isCancelled, progressOf, stageOf, statusLabel } from '../lib/order'
 import { useApp } from '../store'
 import { cls, fmtDay, fmtTime, money } from '../lib/util'
 import { buildOrderMessage, statusLink, waLink } from '../lib/whatsapp'
 import Img from './Img'
-import { Arrow, WAIcon } from './icons'
+import { Arrow, ClockIcon, PinIcon, ScooterIcon, WAIcon } from './icons'
 
+/**
+ * Order tracking. The timeline is the hero of the page: a line that fills,
+ * five nodes that light up, and a rider that actually travels along it.
+ * Horizontal on desktop, a vertical story on mobile (pure CSS).
+ */
 export default function TrackView() {
-  const { orders, focusId, setFocusId, byId, store, go, tick, addToCart, setCartOpen, toast } = useApp()
+  const { orders, focusId, byId, store, go, tick, addToCart, setCartOpen, toast } = useApp()
   const now = Date.now()
   const [selId, setSelId] = useState<string | null>(null)
 
@@ -16,13 +22,15 @@ export default function TrackView() {
     return orders.find(o => o.id === id) ?? orders[0]
   }, [selId, focusId, orders]) // eslint-disable-line react-hooks/exhaustive-deps
 
-  void tick
+  void tick // re-renders on the demo clock
 
   if (orders.length === 0) {
     return (
       <div className="wrap page">
         <div className="empty">
-          <span className="empty-icon">🛵</span>
+          <span className="empty-icon">
+            <ScooterIcon size={26} />
+          </span>
           <h3>No orders yet</h3>
           <p>Place your first order and watch it come to life here — live, step by step.</p>
           <button className="btn btn-primary" onClick={() => go('menu')}>
@@ -34,10 +42,12 @@ export default function TrackView() {
   }
 
   if (!selected) return null
+
   const stage = stageOf(selected, now)
   const progress = progressOf(selected, now)
   const delivered = stage >= STAGES.length - 1
   const cancelled = isCancelled(selected)
+  const headline = cancelled ? 'Cancelled' : delivered ? 'Delivered' : statusLabel(selected)
 
   const orderAgain = () => {
     selected.lines.forEach(l => addToCart(l.id, l.qty))
@@ -48,53 +58,64 @@ export default function TrackView() {
   return (
     <div className="wrap page track">
       <header className="page-head">
-        <div>
+        <div className="page-head-copy">
+          <span className="kicker">
+            <span className={cls('dot-live', delivered && 'off')} aria-hidden />
+            Live status
+          </span>
           <h2>Track your order</h2>
-          <p>Live status, from our kitchen to your door.</p>
+          <p>From our kitchen to your door — updated as it happens.</p>
         </div>
       </header>
 
       <div className="track-grid">
         <section className="card track-detail">
           <div className="track-head">
-            <div>
+            <div className="track-id-block">
               <span className="track-id">#{selected.id}</span>
-              <h3>{fmtDay(selected.ts)} · {fmtTime(selected.ts)}</h3>
+              <h3>
+                {fmtDay(selected.ts)} · {fmtTime(selected.ts)}
+              </h3>
+              <span className="track-channel">
+                {selected.channel === 'table' && selected.table ? (
+                  <>🪑 Table {selected.table} · dine-in</>
+                ) : (
+                  <>
+                    <PinIcon size={12} /> {selected.address}
+                  </>
+                )}
+              </span>
             </div>
             <span className={cls('status-pill', delivered && 'done', cancelled && 'cancelled')}>
-              {cancelled ? '✖ Cancelled' : delivered ? '🎉 Delivered' : STAGES[stage].label}
+              {headline}
             </span>
           </div>
 
           <div className="track-eta">
-            {etaText(selected, now)}
-            <div className="track-progress-num">
-              {Math.round(progress * 100)}% of the way there
-            </div>
+            <span className="track-eta-text">{etaText(selected, now)}</span>
+            <span className="track-progress-num">
+              <b>{Math.round(progress * 100)}%</b> of the way there
+            </span>
           </div>
 
           {/* Timeline */}
-          <div className="timeline" role="img" aria-label={`Order status: ${cancelled ? 'Cancelled' : STAGES[stage].label}`}>
+          <div
+            className={cls('timeline', cancelled && 'cancelled')}
+            style={{ '--p': progress } as CSSProperties}
+            role="img"
+            aria-label={`Order status: ${headline}`}
+          >
             <div className="timeline-line">
-              <i style={{ width: `${progress * 100}%` }} />
+              <i />
             </div>
-            <div
-              className="timeline-scooter"
-              style={{ left: `${progress * 100}%` }}
-              aria-hidden
-            >
+            <div className="timeline-scooter" aria-hidden>
               {delivered ? '🏠' : '🛵'}
             </div>
             <ol className="timeline-nodes">
               {STAGES.map((s, i) => (
                 <li
                   key={s.key}
-                  className={cls(
-                    'tnode',
-                    i < stage && 'done',
-                    i === stage && 'now',
-                    i > stage && 'todo'
-                  )}
+                  className={cls('tnode', i < stage && 'done', i === stage && 'now', i > stage && 'todo')}
                 >
                   <span className="tnode-icon">{i <= stage ? s.icon : '•'}</span>
                   <span className="tnode-label">{s.label}</span>
@@ -105,10 +126,14 @@ export default function TrackView() {
 
           {!cancelled && !delivered && stage >= 3 && (
             <div className="driver-card">
-              <span className="driver-avatar">🧑🏽‍✈️</span>
-              <div>
+              <span className="driver-avatar" aria-hidden>
+                🧑🏽‍✈️
+              </span>
+              <div className="driver-copy">
                 <b>Your rider is on the way</b>
-                <span>🛵 Order #{selected.id} · {etaText(selected, now)}</span>
+                <span>
+                  Order #{selected.id} · {etaText(selected, now)}
+                </span>
               </div>
               <a
                 className="btn btn-ghost btn-sm"
@@ -122,7 +147,7 @@ export default function TrackView() {
           )}
 
           <div className="track-items">
-            <ul>
+            <ul className="track-lines">
               {selected.lines.map(l => {
                 const it = byId(l.id)
                 if (!it) return null
@@ -133,8 +158,12 @@ export default function TrackView() {
                     </div>
                     <div className="ti-info">
                       <b>{it.name}</b>
-                      <span>× {l.qty}</span>
+                      <span>
+                        × {l.qty}
+                        {it.unit ? ` · ${it.unit}` : ''}
+                      </span>
                     </div>
+                    <b className="ti-total">{money(it.price * l.qty, store.currency)}</b>
                   </li>
                 )
               })}
@@ -153,10 +182,7 @@ export default function TrackView() {
                 <span>{money(selected.total, store.currency)}</span>
               </div>
               <p className="track-addr">
-                {selected.channel === 'table' && selected.table
-                  ? `🪑 Table ${selected.table} · dine-in`
-                  : `📍 ${selected.address}`}{' '}
-                · 🕒 {selected.when}
+                <ClockIcon size={13} /> {selected.when}
               </p>
             </div>
           </div>
@@ -165,29 +191,31 @@ export default function TrackView() {
             <span className="track-status-note" aria-live="polite">
               Status: {cancelled ? 'Cancelled' : statusLabel(selected)}
             </span>
-            <a
-              className="btn btn-wa"
-              href={statusLink(store, selected)}
-              target="_blank"
-              rel="noreferrer"
-            >
-              <WAIcon size={16} /> Chat with {store.name}
-            </a>
-            <button
-              className="btn btn-ghost"
-              onClick={() =>
-                window.open(
-                  waLink(store.whatsapp, buildOrderMessage(store, selected, byId)),
-                  '_blank',
-                  'noopener'
-                )
-              }
-            >
-              📤 Re-send order
-            </button>
-            <button className="btn btn-ghost" onClick={orderAgain}>
-              ♻️ Order again
-            </button>
+            <span className="track-actions-btns">
+              <a
+                className="btn btn-wa"
+                href={statusLink(store, selected)}
+                target="_blank"
+                rel="noreferrer"
+              >
+                <WAIcon size={16} /> Chat with {store.name}
+              </a>
+              <button
+                className="btn btn-ghost"
+                onClick={() =>
+                  window.open(
+                    waLink(store.whatsapp, buildOrderMessage(store, selected, byId)),
+                    '_blank',
+                    'noopener'
+                  )
+                }
+              >
+                Re-send order
+              </button>
+              <button className="btn btn-ghost" onClick={orderAgain}>
+                Order again
+              </button>
+            </span>
           </div>
         </section>
 
@@ -203,17 +231,18 @@ export default function TrackView() {
                   key={o.id}
                   className={cls('tcard', o.id === selected.id && 'on', d && 'delivered', c && 'cancelled')}
                   onClick={() => setSelId(o.id)}
+                  aria-pressed={o.id === selected.id}
                 >
                   <div className="tcard-top">
                     <b>#{o.id}</b>
                     <span className={cls('tcard-status', d && 'done', c && 'cancelled')}>
-                      {c ? 'Cancelled' : d ? 'Delivered 🎉' : STAGES[s].label}
+                      {c ? 'Cancelled' : d ? 'Delivered' : STAGES[s].label}
                     </span>
                   </div>
                   <div className="tcard-mid">
                     <span>
                       {fmtDay(o.ts)} · {fmtTime(o.ts)} · {o.lines.reduce((a, l) => a + l.qty, 0)} items
-                      {o.channel === 'table' && o.table ? ` · 🪑 Table ${o.table}` : ''}
+                      {o.channel === 'table' && o.table ? ` · Table ${o.table}` : ''}
                     </span>
                     <b>{money(o.total, store.currency)}</b>
                   </div>

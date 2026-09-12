@@ -3,6 +3,7 @@ import { useApp } from '../../store'
 import { copyText } from '../../lib/util'
 import { downloadQR } from '../../lib/qr'
 import QR from '../QR'
+import { CopyIcon, DownloadIcon, PrintIcon, TrashIcon } from '../icons'
 
 const SIZES = [
   { s: 56, label: 'table tent' },
@@ -53,22 +54,24 @@ export default function QRPanel() {
         <section className="card">
           <h3 className="card-h">Your storefront QR</h3>
           <p className="card-sub">
-            Opens <b>{store.name}</b> for anyone who scans it. Use this one on your
-            window, counter or flyers.
+            Opens <b>{store.name}</b> for anyone who scans it. Use this one on your window,
+            counter or flyers.
           </p>
           <div className="qr-frame">
             <QR value={link} size={216} canvasId="qr-main" />
           </div>
-          <p className="qr-link" title={link}>{link}</p>
+          <p className="qr-link" title={link}>
+            {link}
+          </p>
           <div className="btn-row">
             <button className="btn btn-primary btn-sm" onClick={() => download(link, 'store')}>
-              ⬇ Download PNG
+              <DownloadIcon size={14} /> Download PNG
             </button>
             <button className="btn btn-ghost btn-sm" onClick={() => copy(link, 'Store')}>
-              📋 Copy link
+              <CopyIcon size={14} /> Copy link
             </button>
-            <button className="btn btn-ghost btn-sm" onClick={() => window.print()}>
-              🖨 Print table tents
+            <button className="btn btn-ghost btn-sm no-print" onClick={() => window.print()}>
+              <PrintIcon size={14} /> Print table tents
             </button>
           </div>
           <div className="qr-sizes">
@@ -89,8 +92,8 @@ export default function QRPanel() {
         <section className="card">
           <h3 className="card-h">Table QR codes</h3>
           <p className="card-sub">
-            One code per table. The table number travels with the order, so you
-            know exactly where to carry the plate — no address needed.
+            One code per table. The table number travels with the order, so you know exactly
+            where to carry the plate — no address needed.
           </p>
 
           <form className="table-add" onSubmit={addFromDraft}>
@@ -125,28 +128,33 @@ export default function QRPanel() {
                       <QR value={url} size={104} />
                     </div>
                     <b className="table-label">Table {t}</b>
-                    <span className="table-url" title={url}>?table={t}</span>
+                    <span className="table-url" title={url}>
+                      ?table={t}
+                    </span>
                     <div className="btn-row btn-row-tight">
                       <button
                         className="btn btn-ghost btn-xs"
                         onClick={() => download(url, `table-${t}`)}
                         aria-label={`Download the QR for table ${t}`}
                       >
-                        ⬇
+                        <DownloadIcon size={13} />
                       </button>
                       <button
                         className="btn btn-ghost btn-xs"
                         onClick={() => copy(url, `Table ${t}`)}
                         aria-label={`Copy the link for table ${t}`}
                       >
-                        📋
+                        <CopyIcon size={13} />
                       </button>
                       <button
                         className="btn btn-ghost btn-xs danger"
-                        onClick={() => { removeTable(t); toast(`Table ${t} removed`, '🗑️') }}
+                        onClick={() => {
+                          removeTable(t)
+                          toast(`Table ${t} removed`, '🗑️')
+                        }}
                         aria-label={`Remove table ${t}`}
                       >
-                        🗑
+                        <TrashIcon size={13} />
                       </button>
                     </div>
                   </li>
@@ -158,24 +166,28 @@ export default function QRPanel() {
       </div>
 
       <section className="tents" id="tents" aria-label="Printable table tents">
-        <h3 className="no-print">Printable table tents</h3>
+        <h3 className="card-h no-print">Printable table tents</h3>
         <p className="card-sub no-print">
           {tables.length > 0
             ? `One tent per table (${tables.length}). Print, fold, place.`
             : 'Three generic tents. Add tables above to print numbered ones.'}
         </p>
-        {(tables.length > 0 ? tables : ['', '', '']).map((t, i) => (
-          <div key={t || i} className="tent">
-            <div className="tent-qr">
-              <QR value={t ? tableLink(t) : link} size={120} dark="#111418" light="#ffffff" />
+        <div className="tents-list">
+          {(tables.length > 0 ? tables : ['', '', '']).map((t, i) => (
+            <div key={t || i} className="tent">
+              <div className="tent-qr">
+                <QR value={t ? tableLink(t) : link} size={120} dark="#111418" light="#ffffff" />
+              </div>
+              <b className="tent-name">
+                {store.emoji} {store.name}
+              </b>
+              <span className="tent-slogan">{store.tagline}</span>
+              {t && <span className="tent-table">Table {t}</span>}
+              <span className="tent-cta">Scan · Order · Eat</span>
+              <span className="tent-foot">QR ordering via WhatsApp</span>
             </div>
-            <b className="tent-name">{store.emoji} {store.name}</b>
-            <span className="tent-slogan">{store.tagline}</span>
-            {t && <span className="tent-table">Table {t}</span>}
-            <span className="tent-cta">Scan · Order · Eat</span>
-            <span className="tent-foot">QR ordering via WhatsApp</span>
-          </div>
-        ))}
+          ))}
+        </div>
       </section>
     </div>
   )

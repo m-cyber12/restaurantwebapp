@@ -2,9 +2,10 @@ import { useEffect, useMemo, useState } from 'react'
 import { PAYMENTS, WHEN_OPTIONS } from '../data'
 import { useApp } from '../store'
 import { cls, load, money, save } from '../lib/util'
+import { buildOrderMessage } from '../lib/whatsapp'
 import Img from './Img'
 import SlideToOrder from './SlideToOrder'
-import { Arrow } from './icons'
+import { Arrow, WAIcon } from './icons'
 
 interface Form {
   name: string
@@ -63,6 +64,37 @@ export default function CheckoutView() {
   ].filter(Boolean) as string[]
   const valid = missing.length === 0
 
+  /**
+   * Show the exact message that will land on the restaurant's WhatsApp, built
+   * from the form as it stands. Nothing here is mocked — it is the same
+   * `buildOrderMessage` the real send uses.
+   */
+  const preview = useMemo(() => {
+    if (lines.length === 0) return ''
+    return buildOrderMessage(
+      store,
+      {
+        id: 'FB-••••',
+        ts: Date.now(),
+        lines: cart,
+        subtotal,
+        deliveryFee,
+        total,
+        name: form.name.trim() || 'Your name',
+        phone: form.phone.trim() || 'your phone',
+        address: dineIn ? '' : `${form.address.trim() || 'your address'}, ${form.city}`.replace(/,\s*$/, ''),
+        when: form.when,
+        payment: payMeta?.label ?? form.payment,
+        note: form.note.trim(),
+        sentWhatsApp: true,
+        channel: dineIn ? 'table' : 'delivery',
+        table: dineIn ? table ?? undefined : undefined,
+      },
+      byId
+    )
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [store, cart, subtotal, deliveryFee, total, form, dineIn, table, byId])
+
   const set = (k: keyof Form, v: string | boolean) => setForm(f => ({ ...f, [k]: v }))
 
   const submit = () => {
@@ -90,8 +122,8 @@ export default function CheckoutView() {
           <span className="empty-icon">🔴</span>
           <h3>{store.name} is closed</h3>
           <p>
-            We are not taking orders right now. Our hours are {store.hours} —
-            your cart is saved, come back then.
+            We are not taking orders right now. Our hours are {store.hours} — your cart is saved,
+            come back then.
           </p>
           <button className="btn btn-primary" onClick={() => go('menu')}>
             Browse the menu <Arrow size={15} />
@@ -119,7 +151,8 @@ export default function CheckoutView() {
   return (
     <div className="wrap page checkout">
       <header className="page-head">
-        <div>
+        <div className="page-head-copy">
+          <span className="kicker">Step 2 of 2 · one slide away</span>
           <h2>Checkout</h2>
           <p>
             {store.name} · {store.city} ·{' '}
@@ -131,7 +164,9 @@ export default function CheckoutView() {
       <div className="checkout-grid">
         <div className="checkout-left">
           <section className="card cform">
-            <h3><span className="cnum">1</span> Contact</h3>
+            <h3>
+              <span className="cnum">1</span> Contact
+            </h3>
             <div className="frow">
               <label>
                 <span>Your name</span>
@@ -156,10 +191,14 @@ export default function CheckoutView() {
           </section>
 
           <section className="card cform">
-            <h3><span className="cnum">2</span> {dineIn ? 'Your table' : 'Delivery address'}</h3>
+            <h3>
+              <span className="cnum">2</span> {dineIn ? 'Your table' : 'Delivery address'}
+            </h3>
             {dineIn ? (
               <div className="table-banner">
-                <span className="table-banner-num">🪑 {table}</span>
+                <span className="table-banner-num" aria-hidden>
+                  🪑
+                </span>
                 <div>
                   <b>Table {table}</b>
                   <span>Eating in — we will bring it over. No delivery fee.</span>
@@ -195,12 +234,13 @@ export default function CheckoutView() {
             </div>
             <div className="when-row">
               <span className="when-label">When?</span>
-              <div className="chips">
+              <div className="chips" role="group" aria-label="Delivery time">
                 {WHEN_OPTIONS.map(w => (
                   <button
                     key={w}
                     className={cls('chip-btn', form.when === w && 'on')}
                     onClick={() => set('when', w)}
+                    aria-pressed={form.when === w}
                   >
                     {w}
                   </button>
@@ -210,15 +250,20 @@ export default function CheckoutView() {
           </section>
 
           <section className="card cform">
-            <h3><span className="cnum">3</span> Payment</h3>
-            <div className="pay-grid">
+            <h3>
+              <span className="cnum">3</span> Payment
+            </h3>
+            <div className="pay-grid" role="group" aria-label="Payment method">
               {PAYMENTS.map(p => (
                 <button
                   key={p.id}
                   className={cls('pay', form.payment === p.id && 'on')}
                   onClick={() => set('payment', p.id)}
+                  aria-pressed={form.payment === p.id}
                 >
-                  <span className="pay-icon">{p.icon}</span>
+                  <span className="pay-icon" aria-hidden>
+                    {p.icon}
+                  </span>
                   <span className="pay-label">{p.label}</span>
                   <span className="pay-hint">{p.hint}</span>
                 </button>
@@ -234,6 +279,7 @@ export default function CheckoutView() {
                     onChange={e => setCard(c => ({ ...c, number: e.target.value }))}
                     placeholder="4242 4242 4242 4242"
                     inputMode="numeric"
+                    autoComplete="cc-number"
                   />
                 </label>
                 <label className="flabel">
@@ -242,6 +288,7 @@ export default function CheckoutView() {
                     value={card.holder}
                     onChange={e => setCard(c => ({ ...c, holder: e.target.value }))}
                     placeholder="A. TALEB"
+                    autoComplete="cc-name"
                   />
                 </label>
                 <div className="frow">
@@ -251,6 +298,7 @@ export default function CheckoutView() {
                       value={card.exp}
                       onChange={e => setCard(c => ({ ...c, exp: e.target.value }))}
                       placeholder="12/28"
+                      autoComplete="cc-exp"
                     />
                   </label>
                   <label>
@@ -260,6 +308,7 @@ export default function CheckoutView() {
                       onChange={e => setCard(c => ({ ...c, cvc: e.target.value }))}
                       placeholder="123"
                       inputMode="numeric"
+                      autoComplete="cc-csc"
                     />
                   </label>
                 </div>
@@ -287,7 +336,10 @@ export default function CheckoutView() {
                   </div>
                   <div className="sl-info">
                     <b>{item!.name}</b>
-                    <span>× {line.qty}{item!.unit ? ` · ${item!.unit}` : ''}</span>
+                    <span>
+                      × {line.qty}
+                      {item!.unit ? ` · ${item!.unit}` : ''}
+                    </span>
                   </div>
                   <b>{money(item!.price * line.qty, store.currency)}</b>
                 </li>
@@ -320,18 +372,28 @@ export default function CheckoutView() {
                 aria-checked={form.sendWA}
                 tabIndex={0}
                 onClick={() => set('sendWA', !form.sendWA)}
-                onKeyDown={e => (e.key === 'Enter' || e.key === ' ') && set('sendWA', !form.sendWA)}
+                onKeyDown={e => {
+                  if (e.key === 'Enter' || e.key === ' ') {
+                    e.preventDefault()
+                    set('sendWA', !form.sendWA)
+                  }
+                }}
               >
                 <i />
               </span>
             </label>
 
-            <SlideToOrder onDone={submit} disabled={!valid} />
-            {!valid && (
-              <p className="slide-hint">
-                Almost there — add {missing.join(', ')}.
-              </p>
+            {form.sendWA && preview && (
+              <div className="wa-preview">
+                <span className="wa-preview-k">
+                  <WAIcon size={13} /> Message preview
+                </span>
+                <pre>{preview}</pre>
+              </div>
             )}
+
+            <SlideToOrder onDone={submit} disabled={!valid} />
+            {!valid && <p className="slide-hint">Almost there — add {missing.join(', ')}.</p>}
             <p className="slide-hint subtle">
               Tip: you can also press <b>Enter</b> on the slider to place the order.
             </p>

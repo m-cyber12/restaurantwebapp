@@ -1,7 +1,8 @@
 import { useApp } from '../store'
-import { cls } from '../lib/util'
+import { cls, money } from '../lib/util'
 import { greetingLink } from '../lib/whatsapp'
-import { WAIcon, CartIcon, PinIcon } from './icons'
+import { useScrolled, useScrollProgress } from '../lib/motion'
+import { WAIcon, CartIcon, PinIcon, Arrow } from './icons'
 import type { View } from '../types'
 
 const TABS: Array<[View, string]> = [
@@ -12,25 +13,43 @@ const TABS: Array<[View, string]> = [
   ['store', 'Manage Store'],
 ]
 
+/**
+ * Floating command bar. One element carries the brand, the route, the
+ * WhatsApp escape hatch and the cart — the four things a customer needs from
+ * anywhere in the product. It gains a surface once the page scrolls, and a
+ * hairline at its edge doubles as the document scroll progress.
+ */
 export default function TopNav() {
-  const { view, go, store, cartCount, setCartOpen } = useApp()
+  const { view, go, store, cartCount, total, setCartOpen } = useApp()
+  const stuck = useScrolled(14)
+  const progress = useScrollProgress()
   const owner = view === 'store'
+
   return (
-    <header className={cls('topnav', owner && 'owner')}>
+    <header className={cls('topnav', stuck && 'stuck', owner && 'owner')}>
       <div className="wrap topnav-in">
-        <button className="brand" onClick={() => go('home')} aria-label="Go to the storefront home">
-          <span className="brand-mark">{store.emoji}</span>
+        <button
+          className="brand"
+          onClick={() => go('home')}
+          aria-label={`${store.name} — go to the storefront home`}
+        >
+          <span className="brand-mark" aria-hidden>
+            {store.emoji}
+          </span>
           <span className="brand-text">
             <span className="brand-name">{store.name}</span>
             <span className="brand-sub">
-              <PinIcon size={11} /> {store.city} · {store.open ? `Open ${store.hours}` : 'Closed'}
+              <span className={cls('dot-live', !store.open && 'off')} aria-hidden />
+              <PinIcon size={11} />
+              {store.city} · {store.open ? `Open ${store.hours}` : 'Closed'}
             </span>
           </span>
         </button>
 
         {owner ? (
-          <span className="mode-pill" aria-label="Owner mode">
-            <span className="dot-live" aria-hidden /> Owner mode
+          <span className="mode-pill">
+            <span className="dot-live" aria-hidden />
+            Owner mode
           </span>
         ) : (
           <nav className="tabs" aria-label="Main">
@@ -39,6 +58,7 @@ export default function TopNav() {
                 key={v}
                 className={cls('tab', view === v && 'on')}
                 onClick={() => go(v)}
+                aria-current={view === v ? 'page' : undefined}
               >
                 {label}
               </button>
@@ -57,20 +77,29 @@ export default function TopNav() {
             <span className="wa-label">WhatsApp</span>
           </a>
           <button
-            className="cartbtn"
+            className={cls('cartbtn', cartCount > 0 && 'has')}
             onClick={() => setCartOpen(true)}
             aria-label={`Open cart, ${cartCount} items`}
           >
             <CartIcon size={19} />
             <span className="cartbtn-label">Cart</span>
             {cartCount > 0 && (
-              <span className="cartbadge" key={cartCount}>
-                {cartCount}
-              </span>
+              <>
+                <span className="cartbadge" key={cartCount}>
+                  {cartCount}
+                </span>
+                <span className="cartbtn-total" aria-hidden>
+                  {money(total, store.currency)}
+                </span>
+              </>
             )}
           </button>
         </div>
       </div>
+
+      <span className="nav-progress" aria-hidden>
+        <i style={{ transform: `scaleX(${progress})` }} />
+      </span>
     </header>
   )
 }

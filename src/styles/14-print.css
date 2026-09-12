@@ -1,0 +1,103 @@
+/* ═══════════════════════════════════════════════════════════════
+   PRINT — table tents and nothing else.
+   The QR panel's "Print table tents" walks this chain: everything that is
+   not on the path to `.tents` is removed from the print tree.
+   ═══════════════════════════════════════════════════════════════ */
+
+@media print {
+  :root {
+    --bg: #fff;
+  }
+
+  @page {
+    margin: 12mm;
+  }
+
+  html,
+  body {
+    background: #fff !important;
+    color: #14100e !important;
+  }
+
+  body::before,
+  body::after {
+    display: none !important;
+  }
+
+  /* hide the app chrome, the nav, the overlays */
+  .skip-link,
+  .topnav,
+  .bottomnav,
+  .footer,
+  .toasts,
+  .scrim,
+  .drawer,
+  .modal-scrim,
+  .no-print {
+    display: none !important;
+  }
+
+  /* keep only the path down to the tents */
+  .app,
+  .main,
+  .owner-page,
+  .owner-shell,
+  .owner-main,
+  .owner-body,
+  .owner-qr,
+  .tents {
+    display: block !important;
+    position: static !important;
+    width: auto !important;
+    max-width: none !important;
+    padding: 0 !important;
+    margin: 0 !important;
+    border: none !important;
+    background: #fff !important;
+    box-shadow: none !important;
+  }
+
+  .app > *:not(.main),
+  .owner-page > *:not(.owner-shell),
+  .owner-shell > *:not(.owner-main),
+  .owner-main > *:not(.owner-body),
+  .owner-body > *:not(.owner-qr),
+  .owner-qr > *:not(.tents) {
+    display: none !important;
+  }
+
+  .tents {
+    padding: 0 !important;
+  }
+
+  .tents-list {
+    display: flex !important;
+    flex-wrap: wrap;
+    gap: 12px;
+  }
+
+  .tent {
+    break-inside: avoid;
+    page-break-inside: avoid;
+    border: 1px solid #cfc7bf !important;
+    box-shadow: none !important;
+    background: #fff !important;
+    color: #14100e !important;
+  }
+
+  .tent-qr {
+    border-color: #ddd6cf !important;
+  }
+
+  .tent-table {
+    background: #14100e !important;
+    color: #fff !important;
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+  }
+
+  canvas {
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+  }
+}

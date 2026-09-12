@@ -1,0 +1,23 @@
+/* ═══════════════════════════════════════════════════════════════
+   FRESH BITES — stylesheet entry point.
+
+   Order matters: tokens → base → motion → components, then one file per
+   product surface, then the cross-cutting layers (responsive, print).
+   Every file is scoped to its own concern; nothing here is dead weight
+   carried over from the previous design.
+   ═══════════════════════════════════════════════════════════════ */
+
+@import './01-tokens.css';
+@import './02-base.css';
+@import './04-motion.css';
+@import './03-components.css';
+@import './05-nav.css';
+@import './06-hero.css';
+@import './07-home.css';
+@import './08-catalog.css';
+@import './09-cart-checkout.css';
+@import './10-track.css';
+@import './11-owner.css';
+@import './12-footer.css';
+@import './13-responsive.css';
+@import './14-print.css';
